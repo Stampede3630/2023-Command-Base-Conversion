@@ -6,6 +6,7 @@ package frc.robot.subsystems;
 
 import com.kauailabs.navx.frc.AHRS;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -17,25 +18,30 @@ import frc.robot.subsystems.swerve.QuadFalconSwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 
 public class SwerveDrive extends SubsystemBase {
-  QuadFalconSwerveDrive swerveDrive = new QuadFalconSwerveDrive();
-  public AHRS gyro;
+  QuadFalconSwerveDrive m_swerveDrive = new QuadFalconSwerveDrive();
+  AHRS gyro;
   
   /** Creates a new SwerveDrive. */
   public SwerveDrive() {
-    swerveDrive.driveRobotInit();
-    swerveDrive.checkAndSetSwerveCANStatus();
-    swerveDrive.checkAndZeroSwerveAngle();
+    m_swerveDrive.driveRobotInit();
+    m_swerveDrive.checkAndSetSwerveCANStatus();
+    m_swerveDrive.checkAndZeroSwerveAngle();
     gyro = new AHRS(Port.kMXP);
   }
 
   @Override
   public void periodic() {
-    swerveDrive.checkAndSetSwerveCANStatus();
+    m_swerveDrive.checkAndSetSwerveCANStatus();
   }
 
-  public void setDriveSpeeds(Translation2d xySpeedsMetersPerSec, double rRadiansPerSecond, boolean fieldRelative, boolean isOpenLoop){
+  /**
+   * @param xySpeedsMetersPerSec (X is Positive forward, Y is Positive Right)
+   * @param rRadiansPerSecond 
+   * @param fieldRelative (SUGGESTION: Telop use field centric, AUTO use robot centric)
+   */
+  public void setDriveSpeeds(Translation2d xySpeedsMetersPerSec, double rRadiansPerSecond, boolean fieldRelative){
     SwerveModuleState[] swerveModuleStates =
-      swerveDrive.m_kinematics.toSwerveModuleStates(
+      m_swerveDrive.m_kinematics.toSwerveModuleStates(
         fieldRelative ? ChassisSpeeds.fromFieldRelativeSpeeds(
                             xySpeedsMetersPerSec.getX(), 
                             xySpeedsMetersPerSec.getY(), 
@@ -48,9 +54,33 @@ public class SwerveDrive extends SubsystemBase {
                             rRadiansPerSecond)
                         );
     SwerveDriveKinematics.desaturateWheelSpeeds(swerveModuleStates, SwerveConstants.MAX_SPEED_METERSperSECOND);
-    swerveDrive.setModuleSpeeds(swerveModuleStates);
+    m_swerveDrive.setModuleSpeeds(swerveModuleStates);
   }
+
+
   
   
+  /**
+   * @return a Rotation2d populated by the gyro readings or estimated by encoder wheels (if gyro is disconnected)
+   */
+  public Rotation2d getRobotAngle(){
+    if (gyro.isConnected()){
+        return gyro.getRotation2d();
+    } else {
+        try {
+        //System.out.println( deltaTime);
+        return m_poseEstimator.getEstimatedPosition().getRotation().rotateBy(new Rotation2d(m_swerveDrive.m_kinematics.toChassisSpeeds(m_swerveDrive.getModuleStates()).omegaRadiansPerSecond *Robot.deltaTime));
+        } catch (Exception e) {
+        return new Rotation2d();        
+        }
+    }
+    gyro.
+  }
+
+  public void updateOdometry(){
+    m_poseEstimator.update(getRobotAngle(), 
+    quadFalconSwerveDrive.getModuleStates(), 
+    quadFalconSwerveDrive.getModulePositions());
+  }
 
 }
