@@ -12,7 +12,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.Robot;
-import frc.robot.SimGyroSensorModel;
+import frc.robot.util.SimGyroSensorModel;
 
 
 
@@ -20,22 +20,25 @@ import frc.robot.SimGyroSensorModel;
 public class QuadFalconSwerveDrive {
     public String NeutralMode = "Brake";
     public TalonFXConfiguration driveMotorConfig = new TalonFXConfiguration();
+
+    public SwerveModule FrontLeftSwerveModule = new SwerveModule(
+      new SwerveModule.DriveMotor(SwerveConstants.FLDriveID,SwerveConstants.FLInvertType, SwerveConstants.FLDriveGains),
+      new SwerveModule.SteeringMotor(SwerveConstants.FLSteerID, SwerveConstants.FLSteerGains), 
+      new SwerveModule.SteeringSensor(SwerveConstants.FLSensorID,SwerveConstants.FLSensorOffset),
+      new Translation2d(SwerveConstants.WHEEL_BASE_METERS/2, -SwerveConstants.TRACK_WIDE/2));
    
     public SwerveModule FrontRightSwerveModule = new SwerveModule(
         new SwerveModule.DriveMotor(SwerveConstants.FRDriveID, SwerveConstants.FRInvertType, SwerveConstants.FRDriveGains), 
         new SwerveModule.SteeringMotor(SwerveConstants.FRSteerID, SwerveConstants.FRSteerGains), 
         new SwerveModule.SteeringSensor(SwerveConstants.FRSensorID,SwerveConstants.FRSensorOffset),
         new Translation2d(SwerveConstants.WHEEL_BASE_METERS/2, SwerveConstants.TRACK_WIDE/2) );
-    public SwerveModule FrontLeftSwerveModule = new SwerveModule(
-        new SwerveModule.DriveMotor(SwerveConstants.FLDriveID,SwerveConstants.FLInvertType, SwerveConstants.FLDriveGains),
-        new SwerveModule.SteeringMotor(SwerveConstants.FLSteerID, SwerveConstants.FLSteerGains), 
-        new SwerveModule.SteeringSensor(SwerveConstants.FLSensorID,SwerveConstants.FLSensorOffset),
-        new Translation2d(SwerveConstants.WHEEL_BASE_METERS/2, -SwerveConstants.TRACK_WIDE/2));
+
     public SwerveModule BackRightSwerveModule = new SwerveModule(
         new SwerveModule.DriveMotor(SwerveConstants.BRDriveID,SwerveConstants.BRInvertType, SwerveConstants.BRDriveGains) , 
         new SwerveModule.SteeringMotor(SwerveConstants.BRSteerID, SwerveConstants.BRSteerGains), 
         new SwerveModule.SteeringSensor(SwerveConstants.BRSensorID,SwerveConstants.BRSensorOffset),
         new Translation2d(-SwerveConstants.WHEEL_BASE_METERS/2, SwerveConstants.TRACK_WIDE/2));
+
     public SwerveModule BackLeftSwerveModule = new SwerveModule(
         new SwerveModule.DriveMotor(SwerveConstants.BLDriveID,SwerveConstants.BLInvertType, SwerveConstants.BLDriveGains), 
         new SwerveModule.SteeringMotor(SwerveConstants.BLSteerID, SwerveConstants.BLSteerGains), 
@@ -57,37 +60,31 @@ public class QuadFalconSwerveDrive {
             BackRightSwerveModule);
 
     public void checkAndSetSwerveCANStatus(){
-        FrontRightSwerveModule.setSWERVEMODULECANStatusFrames();
-        BackRightSwerveModule.setSWERVEMODULECANStatusFrames();
-        FrontLeftSwerveModule.setSWERVEMODULECANStatusFrames();
-        BackLeftSwerveModule.setSWERVEMODULECANStatusFrames();
-    }
-    public void driveRobotInit() {
-        FrontRightSwerveModule.swerveRobotInit();
-        BackRightSwerveModule.swerveRobotInit();
-        FrontLeftSwerveModule.swerveRobotInit();
-        BackLeftSwerveModule.swerveRobotInit();
+        FrontLeftSwerveModule.setSwerveModuleCANStatusFrames();
+        FrontRightSwerveModule.setSwerveModuleCANStatusFrames();
+        BackLeftSwerveModule.setSwerveModuleCANStatusFrames();
+        BackRightSwerveModule.setSwerveModuleCANStatusFrames();
     }
 
     public void checkAndZeroSwerveAngle() {
-        FrontRightSwerveModule.zeroSwerveAngle();
-        BackRightSwerveModule.zeroSwerveAngle();
-        FrontLeftSwerveModule.zeroSwerveAngle();
-        BackLeftSwerveModule.zeroSwerveAngle();
+      FrontLeftSwerveModule.zeroSwerveAngle();
+      BackLeftSwerveModule.zeroSwerveAngle();
+      FrontRightSwerveModule.zeroSwerveAngle();
+      BackRightSwerveModule.zeroSwerveAngle();      
     }
 
     public void activateDefensiveStop() {
-        FrontRightSwerveModule.setSteeringAngle(135);
-        FrontRightSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
-  
-        FrontLeftSwerveModule.setSteeringAngle(45);
-        FrontLeftSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
-  
-        BackRightSwerveModule.setSteeringAngle(45);
-        BackRightSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
-  
-        BackLeftSwerveModule.setSteeringAngle(135);
-        BackLeftSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
+      FrontLeftSwerveModule.setSteeringAngle(45);
+      FrontLeftSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
+
+      FrontRightSwerveModule.setSteeringAngle(135);
+      FrontRightSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
+
+      BackLeftSwerveModule.setSteeringAngle(135);
+      BackLeftSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
+
+      BackRightSwerveModule.setSteeringAngle(45);
+      BackRightSwerveModule.mDriveMotor.set(ControlMode.PercentOutput, 0);
     }
 
     public void setModuleSpeeds (SwerveModuleState[] _swerveModuleStates) {
@@ -97,7 +94,7 @@ public class QuadFalconSwerveDrive {
         BackRightSwerveModule.setDesiredState(_swerveModuleStates[3]);
     }
 
-      /**
+  /**
    * MUST BE ADDED TO PERIODIC (NOT INIT METHODS)
    * sets all the talons (steer and drive motors) to coast.
    * This allows for easy moving of the robot
@@ -115,7 +112,7 @@ public class QuadFalconSwerveDrive {
         NeutralMode = "Coast";
       }
   }
-/**When we drive around we want the robot to brake... nuff said */
+
   public void setToBrake(){
     FrontRightSwerveModule.swerveEnabledInit();
     BackRightSwerveModule.swerveEnabledInit();

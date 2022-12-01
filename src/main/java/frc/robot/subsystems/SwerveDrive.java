@@ -8,10 +8,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 import com.kauailabs.navx.frc.AHRS;
-
-import frc.robot.Constants;
-import frc.robot.Robot;
-import frc.robot.SimGyroSensorModel;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -26,7 +22,6 @@ import edu.wpi.first.math.numbers.N5;
 import edu.wpi.first.math.numbers.N7;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -36,6 +31,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.swerve.QuadFalconSwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import frc.robot.subsystems.swerve.SwerveModule;
+import frc.robot.util.SimGyroSensorModel;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -51,13 +47,22 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   @Log
   public Field2d m_field;
-  /** Creates a new SwerveDrive. */
+
   public SwerveDrive() {
+    //NAVX gyro and sim setup
     gyro = new AHRS(Port.kMXP);
     gyro.reset(); 
     simNavx = new SimGyroSensorModel();
+
+    //SwerveDrive Setup
     m_driveTrain = new QuadFalconSwerveDrive();
+    m_driveTrain.checkAndSetSwerveCANStatus();
+    m_driveTrain.checkAndZeroSwerveAngle();
+    
+    //helps visualize robot on virtual field
     m_field = new Field2d();
+    
+    //Uses 2023 new Pose Estimators which is a drop-in replacement(mostly) for odometry
     m_odometry =     
     new SwerveDrivePoseEstimator<N7, N7, N5>(
       Nat.N7(),
@@ -70,23 +75,16 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
       VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5), 0.05, 0.05, 0.05, 0.05),
       VecBuilder.fill(Units.degreesToRadians(0.01), 0.01, 0.01, 0.01, 0.01),
       VecBuilder.fill(0.5, 0.5, Units.degreesToRadians(30)));
-    m_driveTrain.driveRobotInit();
-    m_driveTrain.checkAndSetSwerveCANStatus();
-    m_driveTrain.checkAndZeroSwerveAngle();
   }
 
   @Override
   public void periodic() {
-    prevRobotPose = robotPose;
-        // m_driveTrain.checkAndSetSwerveCANStatus();
     updateOdometry();
+    prevRobotPose = robotPose;
     robotPose = m_odometry.getEstimatedPosition();
     deltaTime = Timer.getFPGATimestamp() - prevTime;
-    //System.out.println(deltaTime);
     prevTime = Timer.getFPGATimestamp();
-    
 
-    drawRobotOnField(m_field);
     if(RobotBase.isSimulation()) {
       for(SwerveModule module : m_driveTrain.SwerveModuleList) {
         module.simModule.simulationPeriodic(deltaTime);
@@ -95,12 +93,10 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
       System.out.println(robotPose.getRotation().getDegrees() - prevRobotPose.getRotation().getDegrees());
       
     }
-
-
+    //commented this line out due to 
+    // m_driveTrain.checkAndSetSwerveCANStatus();
+    drawRobotOnField(m_field);
   }
-
-
-
 
 
   /**
@@ -135,8 +131,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
         }, this);
   }
 
-  
-  
+
   /**
    * @return a Rotation2d populated by the gyro readings 
    * or estimated by encoder wheels (if gyro is disconnected)
@@ -159,9 +154,6 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   public double getRobotAngleDegrees() {
     return getRobotAngle().getDegrees();
   }
-
-
-
 
   /**
    * @param xySpeedsMetersPerSec (X is Positive forward, Y is Positive Right)
@@ -186,18 +178,23 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     m_driveTrain.setModuleSpeeds(swerveModuleStates);
   }
 
+  /** 
+   * Update the SwerveDrivePoseEstimator
+  */
   public void updateOdometry(){
     m_odometry.update(getRobotAngle(), 
       m_driveTrain.getModuleStates(), 
       m_driveTrain.getModulePositions());
   }
 
+  /**
+   * Draw a pose that is based on the robot pose, but shifted by the translation of the module relative to robot center,
+   * then rotated around its own center by the angle of the module.
+   * @param field
+   */
   public void drawRobotOnField(Field2d field) {
     field.setRobotPose(m_odometry.getEstimatedPosition());
-    
-    // Draw a pose that is based on the robot pose, but shifted by the translation of the module relative to robot center,
-    // then rotated around its own center by the angle of the module.
-    
+
     field.getObject("frontLeft").setPose(
       m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontLeftSwerveModule.mTranslation2d, m_driveTrain.FrontLeftSwerveModule.getSwerveModuleState().angle)));
     field.getObject("frontRight").setPose(
@@ -206,6 +203,17 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
       m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackLeftSwerveModule.mTranslation2d, m_driveTrain.BackLeftSwerveModule.getSwerveModuleState().angle)));
     field.getObject("backRight").setPose(
       m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackRightSwerveModule.mTranslation2d, m_driveTrain.BackRightSwerveModule.getSwerveModuleState().angle)));
+  }
+
+  public void setToBrake(){
+    m_driveTrain.setToBrake();
+  }
+
+  /**
+   * METHOD WILL NOT WORK UNLESS ADDED TO PERIODIC
+   */
+  public void setToCoast(){
+    m_driveTrain.setToCoast();
   }
 
 

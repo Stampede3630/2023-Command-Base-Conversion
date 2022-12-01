@@ -62,6 +62,15 @@ public class RobotContainer {
    */
   private void configureButtonBindings() {}
 
-  
+  public void setDriveTrainToBrake(){
+    s_SwerveDrive.setToBrake();
+  }
+
+  /**
+   * MUST BE CALLED IN DISABLEDPERIODIC to work properly
+   */
+  public void setDriveTraintoCoast(){
+    s_SwerveDrive.setToCoast();
+  }
 
 }

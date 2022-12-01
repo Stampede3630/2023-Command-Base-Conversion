@@ -86,15 +86,9 @@ public class SwerveModule {
         driveCurrentLimitConfigurationEnable.triggerThresholdCurrent = 80;
         driveCurrentLimitConfigurationEnable.triggerThresholdTime = .1;
         driveCurrentLimitConfigurationEnable.currentLimit = 60;
-
-                   
-    }
-
-    public void swerveRobotInit(){
-        
-
         
         //Setup the drive motor, but first set EVERYTHING to DEFAULT
+        //Commented this out for boot speed savings
         //mDriveMotor.configFactoryDefault();
 
         mDriveMotor.setInverted(mDriveMotor.kWheelDirectionType);
@@ -136,6 +130,7 @@ public class SwerveModule {
         mySteeringMotorConfiguration.slot0.allowableClosedloopError = SwerveConstants.kDefaultClosedLoopError;
         mySteeringMotorConfiguration.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder;
         mySteeringMotorConfiguration.remoteFilter0.remoteSensorDeviceID= mSteeringSensor.getDeviceID();
+
         if(mSteeringMotor.configAllSettings(mySteeringMotorConfiguration,1000)==ErrorCode.OK)   {
             System.out.println("Steer Motor " + mSteeringMotor.getDeviceID() + " configured.");
         } else {
@@ -148,7 +143,7 @@ public class SwerveModule {
         mSteeringMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor,0,SwerveConstants.kDefaultTimeout);
     }
 
-    public void setSWERVEMODULECANStatusFrames(){
+    public void setSwerveModuleCANStatusFrames(){
         
         if(mDriveMotor.hasResetOccurred()){
             int mycounter = 0;
