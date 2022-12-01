@@ -54,10 +54,6 @@ public class RobotContainer {
     Logger.configureLoggingAndConfig(this, false);
   }
   
-  public void simulationPeriodic() {
-    s_SwerveDrive.simulationPeriodic();
-  }
-
   /**
    * Use this method to define your button->command mappings. Buttons can be created by
    * instantiating a {@link GenericHID} or one of its subclasses ({@link

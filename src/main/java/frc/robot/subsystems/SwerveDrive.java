@@ -25,7 +25,9 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N5;
 import edu.wpi.first.math.numbers.N7;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.CommandBase;
@@ -40,6 +42,9 @@ import io.github.oblarg.oblog.annotations.Log;
 public class SwerveDrive extends SubsystemBase implements Loggable {
   QuadFalconSwerveDrive m_driveTrain;
   Pose2d prevRobotPose = new Pose2d();
+  Pose2d robotPose = new Pose2d();
+  double deltaTime = 0;
+  double prevTime = 0;
   AHRS gyro;
   SimGyroSensorModel simNavx; 
   SwerveDrivePoseEstimator<N7,N7,N5> m_odometry; 
@@ -49,6 +54,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   /** Creates a new SwerveDrive. */
   public SwerveDrive() {
     gyro = new AHRS(Port.kMXP);
+    gyro.reset(); 
     simNavx = new SimGyroSensorModel();
     m_driveTrain = new QuadFalconSwerveDrive();
     m_field = new Field2d();
@@ -71,18 +77,31 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   @Override
   public void periodic() {
-    prevRobotPose = m_odometry.getEstimatedPosition();
-    // m_driveTrain.checkAndSetSwerveCANStatus();
+    prevRobotPose = robotPose;
+        // m_driveTrain.checkAndSetSwerveCANStatus();
     updateOdometry();
+    robotPose = m_odometry.getEstimatedPosition();
+    deltaTime = Timer.getFPGATimestamp() - prevTime;
+    //System.out.println(deltaTime);
+    prevTime = Timer.getFPGATimestamp();
+    
+
     drawRobotOnField(m_field);
+    if(RobotBase.isSimulation()) {
+      for(SwerveModule module : m_driveTrain.SwerveModuleList) {
+        module.simModule.simulationPeriodic(deltaTime);
+      }
+      simNavx.update(robotPose, prevRobotPose, deltaTime);
+      System.out.println(robotPose.getRotation().getDegrees() - prevRobotPose.getRotation().getDegrees());
+      
+    }
+
+
   }
 
-  public void simulationPeriodic(){
-    for(SwerveModule module : m_driveTrain.SwerveModuleList) {
-      module.simModule.simulationPeriodic();
-    }
-    simNavx.update(m_odometry.getEstimatedPosition(), prevRobotPose );
-  }
+
+
+
 
   /**
    * @param _x
@@ -128,12 +147,17 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     } else {
         try {
         //System.out.println( deltaTime);
-        return m_odometry.getEstimatedPosition().getRotation().rotateBy(new Rotation2d(m_driveTrain.m_kinematics.toChassisSpeeds(m_driveTrain.getModuleStates()).omegaRadiansPerSecond *Robot.deltaTime));
+        return m_odometry.getEstimatedPosition().getRotation().rotateBy(new Rotation2d(m_driveTrain.m_kinematics.toChassisSpeeds(m_driveTrain.getModuleStates()).omegaRadiansPerSecond *deltaTime));
         } catch (Exception e) {
         return new Rotation2d();        
         }
     }
     
+  }
+
+  @Log
+  public double getRobotAngleDegrees() {
+    return getRobotAngle().getDegrees();
   }
 
 
@@ -151,7 +175,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
                             xySpeedsMetersPerSec.getX(), 
                             xySpeedsMetersPerSec.getY(), 
                             rRadiansPerSecond, 
-                            gyro.getRotation2d()
+                            getRobotAngle()
                         )
                         : new ChassisSpeeds(
                             xySpeedsMetersPerSec.getX(), 

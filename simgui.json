@@ -10,6 +10,11 @@
         "header": {
           "open": true
         }
+      },
+      "navX-Sensor[0]": {
+        "header": {
+          "open": true
+        }
       }
     }
   },
@@ -34,6 +39,9 @@
       }
     },
     "transitory": {
+      "Preferences": {
+        "open": true
+      },
       "Shuffleboard": {
         "RobotContainer": {
           "open": true

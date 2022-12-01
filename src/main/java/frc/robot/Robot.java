@@ -19,8 +19,6 @@ import io.github.oblarg.oblog.Logger;
  */
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
-  public static double deltaTime = 0;
-  public static double prevTime = 0;
   private RobotContainer m_robotContainer;
 
   /**
@@ -43,9 +41,6 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    deltaTime = Timer.getFPGATimestamp() - prevTime;
-    prevTime = Timer.getFPGATimestamp();
-    deltaTime = .02;
     // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
     // commands, running already-scheduled commands, removing finished or interrupted commands,
     // and running subsystem periodic() methods.  This must be called from the robot's periodic
@@ -108,6 +103,5 @@ public class Robot extends TimedRobot {
   /** This function is called periodically whilst in simulation. */
   @Override
   public void simulationPeriodic() {
-    m_robotContainer.simulationPeriodic();
   }
 }

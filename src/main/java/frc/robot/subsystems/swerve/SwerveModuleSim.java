@@ -55,7 +55,7 @@ public class SwerveModuleSim {
         steerMotorSim = steerMotor.getSimCollection();
     }
 
-    public void simulationPeriodic(){
+    public void simulationPeriodic(double deltaTime){
         // apply our commanded voltage to our simulated physics mechanisms
         double driveVoltage = driveMotorSim.getMotorOutputLeadVoltage();
         if(driveVoltage >= 0) driveVoltage = Math.max(0, driveVoltage-kSteerFF.ks);
@@ -67,19 +67,19 @@ public class SwerveModuleSim {
         else steerVoltage = Math.min(0, steerVoltage+kSteerFF.ks);
         steeringSim.setInputVoltage(steerVoltage);
         
-        driveWheelSim.update(Robot.deltaTime);
-        steeringSim.update(Robot.deltaTime);
+        driveWheelSim.update(deltaTime);
+        steeringSim.update(deltaTime);
 
         // update our simulated devices with our simulated physics results
         double driveMotorVelocityNative = rotationsToVelocity(driveWheelSim.getAngularVelocityRPM()/60, SwerveConstants.DRIVE_MOTOR_GEARING);
-        double driveMotorPositionDeltaNative = driveMotorVelocityNative*10*Robot.deltaTime;
+        double driveMotorPositionDeltaNative = driveMotorVelocityNative*10*deltaTime;
         driveMotorSim.setIntegratedSensorVelocity((int)driveMotorVelocityNative);
         driveMotorSim.addIntegratedSensorPosition((int)(driveMotorPositionDeltaNative));
         driveMotorSim.setSupplyCurrent(driveWheelSim.getCurrentDrawAmps()/2);
 
         //SmartDashboard.putNumber("Steer Sim Model Velocity", steeringSim.getAngularVelocityRPM());
         double steerMotorVelocityNative = rotationsToVelocity(steeringSim.getAngularVelocityRPM()/60, SwerveConstants.STEERING_MOTOR_GEARING);
-        double steerMotorPositionDeltaNative = steerMotorVelocityNative*10*Robot.deltaTime;
+        double steerMotorPositionDeltaNative = steerMotorVelocityNative*10*deltaTime;
         steerMotorSim.setIntegratedSensorVelocity((int)steerMotorVelocityNative);
         steerMotorSim.addIntegratedSensorPosition((int)(steerMotorPositionDeltaNative));
         steerMotorSim.setSupplyCurrent(steeringSim.getCurrentDrawAmps()/2);
