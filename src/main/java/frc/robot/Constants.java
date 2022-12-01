@@ -4,6 +4,10 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import io.github.oblarg.oblog.Loggable;
+import io.github.oblarg.oblog.annotations.Log;
+
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
  * constants. This class should not be used for any other purpose. All constants should be declared
@@ -12,4 +16,9 @@ package frc.robot;
  * <p>It is advised to statically import this class (or one of its inner classes) wherever the
  * constants are needed, to reduce verbosity.
  */
-public final class Constants {}
+public final class Constants implements Loggable{
+    public final static double driveGovernor = 1;
+    public final static boolean fieldRelative = true;
+    public static final boolean acceleratedInputs = false;
+
+}

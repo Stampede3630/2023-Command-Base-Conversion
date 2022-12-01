@@ -4,10 +4,16 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.GenericHID;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.XboxController;
-import frc.robot.commands.ExampleCommand;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import frc.robot.subsystems.SwerveDrive;
+import io.github.oblarg.oblog.Logger;
+
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -16,12 +22,40 @@ import edu.wpi.first.wpilibj2.command.Command;
  * subsystems, commands, and button mappings) should be declared here.
  */
 public class RobotContainer {
+  
+  /*Controller setup.  For simulations google: x360CE */
+  private final XboxController xBox = new XboxController(0);
+  private final int xBoxXAxis = XboxController.Axis.kLeftY.value;
+  private final int xBoxYAxis = XboxController.Axis.kLeftX.value;
+  private final int xBoxRot = XboxController.Axis.kRightX.value;
+
+  private final SwerveDrive s_SwerveDrive = new SwerveDrive();
   // The robot's subsystems and commands are defined here...
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+      Preferences.setBoolean("pFieldRelative", Constants.fieldRelative);
+      Preferences.setBoolean("pAccelInputs", Constants.acceleratedInputs);
+      Preferences.setDouble("pDriveGovernor", Constants.driveGovernor);
+
+      s_SwerveDrive.setDefaultCommand( 
+        s_SwerveDrive.joystickDriveCommand(
+            () -> -xBox.getRawAxis(xBoxXAxis),
+            () -> -xBox.getRawAxis(xBoxYAxis),
+            () -> -xBox.getRawAxis(xBoxRot),
+            () -> Preferences.getDouble("pDriveGovernor", Constants.driveGovernor),
+            () -> Preferences.getBoolean("pFieldRelative", Constants.fieldRelative),
+            () -> Preferences.getBoolean("pAccelInputs", Constants.acceleratedInputs)
+            )
+      );
+            
     // Configure the button bindings
     configureButtonBindings();
+    Logger.configureLoggingAndConfig(this, false);
+  }
+  
+  public void simulationPeriodic() {
+    s_SwerveDrive.simulationPeriodic();
   }
 
   /**
@@ -32,10 +66,6 @@ public class RobotContainer {
    */
   private void configureButtonBindings() {}
 
-  /**
-   * Use this to pass the autonomous command to the main {@link Robot} class.
-   *
-   * @return the command to run in autonomous
-   */
+  
 
 }

@@ -1,0 +1,51 @@
+{
+  "HALProvider": {
+    "Other Devices": {
+      "Talon FX[2]": {
+        "header": {
+          "open": true
+        }
+      },
+      "Talon FX[5]": {
+        "header": {
+          "open": true
+        }
+      }
+    }
+  },
+  "NTProvider": {
+    "types": {
+      "/FMSInfo": "FMSInfo",
+      "/Shuffleboard/SwerveDrive/field": "Field2d",
+      "/Shuffleboard/SwerveDrive/m_field": "Field2d"
+    },
+    "windows": {
+      "/Shuffleboard/SwerveDrive/m_field": {
+        "window": {
+          "visible": true
+        }
+      }
+    }
+  },
+  "NetworkTables": {
+    "persistent": {
+      "Preferences": {
+        "open": true
+      }
+    },
+    "transitory": {
+      "Shuffleboard": {
+        "RobotContainer": {
+          "open": true
+        },
+        "SwerveDrive": {
+          "field": {
+            "open": true
+          },
+          "open": true
+        },
+        "open": true
+      }
+    }
+  }
+}
