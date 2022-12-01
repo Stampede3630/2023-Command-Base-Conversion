@@ -24,7 +24,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.RobotBase;
-import frc.robot.Constants;
+
 
 public class SwerveModule {
     public final SteeringMotor mSteeringMotor;
@@ -45,7 +45,7 @@ public class SwerveModule {
      * @param _DriveMotor
      * @param _SteeringMotor
      * @param _SteeringSensor
-     * @param _ModuleXYPosition X is NS and Y is EW
+     * @param _ModuleXYPosition X is NorthSouth and Y is EastWest
      *     
      * Helpful hints:
      * 1. when determining your steering motor offsets first rotate 
@@ -143,6 +143,9 @@ public class SwerveModule {
         mSteeringMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor,0,SwerveConstants.kDefaultTimeout);
     }
 
+    /**
+     * Set all the status frames high in order relieve
+     */
     public void setSwerveModuleCANStatusFrames(){
         
         if(mDriveMotor.hasResetOccurred()){

@@ -137,7 +137,10 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
    * or estimated by encoder wheels (if gyro is disconnected)
    */
   public Rotation2d getRobotAngle(){
-    if (gyro.isConnected()){
+    if(RobotBase.isSimulation() && gyro.isConnected()) {
+      return simNavx.getRotation2d();
+    
+    } else if (gyro.isConnected()){
         return gyro.getRotation2d();
     } else {
         try {

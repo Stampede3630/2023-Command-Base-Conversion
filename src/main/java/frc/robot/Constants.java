@@ -16,7 +16,7 @@ import io.github.oblarg.oblog.annotations.Log;
  * <p>It is advised to statically import this class (or one of its inner classes) wherever the
  * constants are needed, to reduce verbosity.
  */
-public final class Constants implements Loggable{
+public final class Constants{
     public final static double driveGovernor = 1;
     public final static boolean fieldRelative = true;
     public static final boolean acceleratedInputs = false;
