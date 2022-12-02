@@ -79,20 +79,21 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   @Override
   public void periodic() {
-    prevRobotPose = robotPose;
-    robotPose = updateOdometry();
+   
     deltaTime = Timer.getFPGATimestamp() - prevTime;
     prevTime = Timer.getFPGATimestamp();
     //System.out.println(deltaTime);
     if(RobotBase.isSimulation()) {
       for(SwerveModule module : m_driveTrain.SwerveModuleList) {
         module.simModule.simulationPeriodic(deltaTime);
-      }
-     
-      System.out.println(robotPose.getRotation().getDegrees() - prevRobotPose.getRotation().getDegrees());
-      
+      }    
+      System.out.println(robotPose.getRotation().getDegrees() - prevRobotPose.getRotation().getDegrees());   
     }
     prevRobotPose = robotPose;
+    robotPose = updateOdometry();
+    if(RobotBase.isSimulation()) {
+      simNavx.update(robotPose, prevRobotPose, deltaTime);
+    }
     //commented this line out due to 
     // m_driveTrain.checkAndSetSwerveCANStatus();
     drawRobotOnField(m_field);
@@ -138,7 +139,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
    */
   public Rotation2d getRobotAngle(){
     if(RobotBase.isSimulation() && gyro.isConnected()) {
-      simNavx.update(robotPose, prevRobotPose, deltaTime);
+
       return simNavx.getRotation2d();
 
     
@@ -146,7 +147,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
         return gyro.getRotation2d();
     } else {
         //System.out.println( deltaTime);
-        return m_odometry.getEstimatedPosition().getRotation().rotateBy(new Rotation2d(m_driveTrain.m_kinematics.toChassisSpeeds(m_driveTrain.getModuleStates()).omegaRadiansPerSecond *deltaTime));   
+        return prevRobotPose.getRotation().rotateBy(new Rotation2d(m_driveTrain.m_kinematics.toChassisSpeeds(m_driveTrain.getModuleStates()).omegaRadiansPerSecond *deltaTime));   
     }
     
   }

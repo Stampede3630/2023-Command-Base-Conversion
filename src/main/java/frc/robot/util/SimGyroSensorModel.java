@@ -40,6 +40,7 @@ public class SimGyroSensorModel{
         yawSimDouble.set(yawSimDouble.get() + (gyroRate*deltaTime));
        
     }
+    
     public Rotation2d getRotation2d() {
         return Rotation2d.fromDegrees(yawSimDouble.get());
     }
