@@ -23,6 +23,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.RobotBase;
 
 
@@ -240,7 +241,7 @@ public class SwerveModule {
     
     public void setDesiredState(SwerveModuleState desiredState){
         SwerveModuleState kState = desiredState;
-        if(SwerveConstants.OPTIMIZESTEERING){
+        if(Preferences.getBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING)){
             kState = optimize(desiredState, new Rotation2d(Math.toRadians(mSteeringMotor.getSelectedSensorPosition())));
         }
         

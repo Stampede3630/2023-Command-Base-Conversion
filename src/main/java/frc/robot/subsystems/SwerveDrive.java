@@ -10,7 +10,6 @@ import java.util.function.DoubleSupplier;
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -23,7 +22,6 @@ import edu.wpi.first.math.numbers.N7;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -32,8 +30,10 @@ import frc.robot.subsystems.swerve.QuadFalconSwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import frc.robot.subsystems.swerve.SwerveModule;
 import frc.robot.util.SimGyroSensorModel;
+import frc.robot.util.SwerveDrivePoseEstimator;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
+import edu.wpi.first.wpilibj.SPI;
 
 public class SwerveDrive extends SubsystemBase implements Loggable {
   QuadFalconSwerveDrive m_driveTrain;
@@ -43,14 +43,14 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   double prevTime = 0;
   AHRS gyro;
   SimGyroSensorModel simNavx; 
-  SwerveDrivePoseEstimator<N7,N7,N5> m_odometry; 
+  SwerveDrivePoseEstimator m_odometry; 
 
   @Log
   public Field2d m_field;
 
   public SwerveDrive() {
     //NAVX gyro and sim setup
-    gyro = new AHRS(Port.kMXP);
+    gyro = new AHRS(SPI.Port.kMXP);
     gyro.reset(); 
     simNavx = new SimGyroSensorModel();
 
@@ -64,31 +64,27 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     
     //Uses 2023 new Pose Estimators which is a drop-in replacement(mostly) for odometry
     m_odometry =     
-    new SwerveDrivePoseEstimator<N7, N7, N5>(
-      Nat.N7(),
-      Nat.N7(),
-      Nat.N5(),
+    new SwerveDrivePoseEstimator(
+      m_driveTrain.m_kinematics, 
       getRobotAngle(),
-      m_driveTrain.getModulePositions(),
-      new Pose2d(),
-      m_driveTrain.m_kinematics,
-      VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5), 0.05, 0.05, 0.05, 0.05),
-      VecBuilder.fill(Units.degreesToRadians(0.01), 0.01, 0.01, 0.01, 0.01),
-      VecBuilder.fill(0.5, 0.5, Units.degreesToRadians(30)));
-  }
+      m_driveTrain.getModulePositions(), 
+      robotPose, 
+      VecBuilder.fill(0.001, 0.001, Units.degreesToRadians(.1)), 
+      VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(30)));
+    }
 
   @Override
   public void periodic() {
-   
-    deltaTime = Timer.getFPGATimestamp() - prevTime;
-    prevTime = Timer.getFPGATimestamp();
-    //System.out.println(deltaTime);
     if(RobotBase.isSimulation()) {
       for(SwerveModule module : m_driveTrain.SwerveModuleList) {
         module.simModule.simulationPeriodic(deltaTime);
       }    
-      System.out.println(robotPose.getRotation().getDegrees() - prevRobotPose.getRotation().getDegrees());   
+
     }
+    deltaTime = Timer.getFPGATimestamp() - prevTime;
+    prevTime = Timer.getFPGATimestamp();
+    //System.out.println(deltaTime);
+
     prevRobotPose = robotPose;
     robotPose = updateOdometry();
     if(RobotBase.isSimulation()) {
@@ -132,24 +128,15 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
         }, this);
   }
 
-
+ 
   /**
    * @return a Rotation2d populated by the gyro readings 
    * or estimated by encoder wheels (if gyro is disconnected)
    */
   public Rotation2d getRobotAngle(){
-    if(RobotBase.isSimulation() && gyro.isConnected()) {
-
-      return simNavx.getRotation2d();
-
-    
-    } else if (gyro.isConnected()){
-        return gyro.getRotation2d();
-    } else {
-        //System.out.println( deltaTime);
-        return prevRobotPose.getRotation().rotateBy(new Rotation2d(m_driveTrain.m_kinematics.toChassisSpeeds(m_driveTrain.getModuleStates()).omegaRadiansPerSecond *deltaTime));   
-    }
-    
+    if(RobotBase.isSimulation() || !gyro.isConnected()) {
+      return prevRobotPose.getRotation().rotateBy(new Rotation2d(m_driveTrain.m_kinematics.toChassisSpeeds(m_driveTrain.getModuleStates()).omegaRadiansPerSecond *deltaTime));   
+    } else return gyro.getRotation2d();
   }
 
   @Log
@@ -185,8 +172,22 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   */
   public Pose2d updateOdometry(){
     return m_odometry.update(getRobotAngle(), 
-      m_driveTrain.getModuleStates(), 
       m_driveTrain.getModulePositions());
+  }
+
+  public Pose2d getOdometryPose(){
+    return m_odometry.getEstimatedPosition();
+  }
+
+  public void resetOdometry(Pose2d newPose){
+    m_odometry.resetPosition(getRobotAngle(), m_driveTrain.getModulePositions(), newPose);
+  }
+
+  public SwerveDriveKinematics getKinematics() {
+    return m_driveTrain.m_kinematics;
+  }
+  public void setAutoModuleStates (SwerveModuleState[] states){
+    m_driveTrain.setModuleSpeeds(states);
   }
 
   /**
@@ -198,13 +199,13 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     field.setRobotPose(m_odometry.getEstimatedPosition());
 
     field.getObject("frontLeft").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontLeftSwerveModule.mTranslation2d, m_driveTrain.FrontLeftSwerveModule.getSwerveModuleState().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontLeftSwerveModule.mTranslation2d, m_driveTrain.FrontLeftSwerveModule.getPosition().angle)));
     field.getObject("frontRight").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontRightSwerveModule.mTranslation2d, m_driveTrain.FrontRightSwerveModule.getSwerveModuleState().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontRightSwerveModule.mTranslation2d, m_driveTrain.FrontRightSwerveModule.getPosition().angle)));
     field.getObject("backLeft").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackLeftSwerveModule.mTranslation2d, m_driveTrain.BackLeftSwerveModule.getSwerveModuleState().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackLeftSwerveModule.mTranslation2d, m_driveTrain.BackLeftSwerveModule.getPosition().angle)));
     field.getObject("backRight").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackRightSwerveModule.mTranslation2d, m_driveTrain.BackRightSwerveModule.getSwerveModuleState().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackRightSwerveModule.mTranslation2d, m_driveTrain.BackRightSwerveModule.getPosition().angle)));
   }
 
   public void setToBrake(){

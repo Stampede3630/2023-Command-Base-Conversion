@@ -4,6 +4,15 @@
 
 package frc.robot;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.pathplanner.lib.PathPlanner;
+import com.pathplanner.lib.PathPlannerTrajectory;
+import com.pathplanner.lib.auto.PIDConstants;
+import com.pathplanner.lib.auto.SwerveAutoBuilder;
+import com.pathplanner.lib.PathConstraints;
+
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Preferences;
@@ -11,7 +20,9 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.subsystems.SwerveDrive;
+import frc.robot.subsystems.swerve.SwerveConstants;
 import io.github.oblarg.oblog.Logger;
 
 
@@ -28,7 +39,16 @@ public class RobotContainer {
   private final int xBoxXAxis = XboxController.Axis.kLeftY.value;
   private final int xBoxYAxis = XboxController.Axis.kLeftX.value;
   private final int xBoxRot = XboxController.Axis.kRightX.value;
+  SwerveAutoBuilder autoBuilder;
+  ArrayList<PathPlannerTrajectory> pathGroup;
 
+     
+
+  // This is just an example event map. It would be better to have a constant, global event map
+  // in your code that will be used by all path following commands.
+
+
+// This is just an example event map. It would be better to have a constant, global event map
   private final SwerveDrive s_SwerveDrive = new SwerveDrive();
   // The robot's subsystems and commands are defined here...
 
@@ -37,6 +57,12 @@ public class RobotContainer {
       Preferences.setBoolean("pFieldRelative", Constants.fieldRelative);
       Preferences.setBoolean("pAccelInputs", Constants.acceleratedInputs);
       Preferences.setDouble("pDriveGovernor", Constants.driveGovernor);
+      Preferences.setBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING);
+
+      HashMap<String, Command> eventMap = new HashMap<>();
+      eventMap.put("1stBallPickup", new WaitCommand(2));
+      eventMap.put("2ndBallPickup", new WaitCommand(2));
+      eventMap.put("3rdBallPickup", new WaitCommand(2));
 
       s_SwerveDrive.setDefaultCommand( 
         s_SwerveDrive.joystickDriveCommand(
@@ -48,8 +74,23 @@ public class RobotContainer {
             () -> Preferences.getBoolean("pAccelInputs", Constants.acceleratedInputs)
             )
       );
-            
-    // Configure the button bindings
+      autoBuilder = new SwerveAutoBuilder(
+        s_SwerveDrive::getOdometryPose, // Pose2d supplier
+        s_SwerveDrive::resetOdometry, // Pose2d consumer, used to reset odometry at the beginning of auto
+        s_SwerveDrive.getKinematics(), // SwerveDriveKinematics
+        new PIDConstants(.5, 0.0, 0.0), // PID constants to correct for translation error (used to create the X and Y PID controllers)
+        new PIDConstants(0.05, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
+        s_SwerveDrive::setAutoModuleStates, // Module states consumer used to output to the drive subsystem
+        eventMap,
+        s_SwerveDrive // The drive subsystem. Used to properly set the requirements of path following commands
+      );
+
+        // This will load the file "FullAuto.path" and generate it with a max velocity of 4 m/s and a max acceleration of 3 m/s^2
+      // for every path in the group
+      pathGroup = PathPlanner.loadPathGroup("Test5Ball", new PathConstraints(4, 3));
+
+
+      // Configure the button bindings
     configureButtonBindings();
     Logger.configureLoggingAndConfig(this, false);
   }
@@ -71,6 +112,13 @@ public class RobotContainer {
    */
   public void setDriveTraintoCoast(){
     s_SwerveDrive.setToCoast();
+  }
+
+  public Command getAutonomousCommand() {
+
+    // An ExampleCommand will run in autonomous
+
+    return autoBuilder.fullAuto(pathGroup);   
   }
 
 }

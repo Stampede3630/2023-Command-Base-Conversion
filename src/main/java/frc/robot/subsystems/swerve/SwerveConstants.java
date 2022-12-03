@@ -2,7 +2,7 @@ package frc.robot.subsystems.swerve;
 
 import com.ctre.phoenix.motorcontrol.TalonFXInvertType;
 public final class SwerveConstants {
-    public static final boolean OPTIMIZESTEERING = false;
+    public static final boolean OPTIMIZESTEERING = true;
     public static final boolean CHARACTERIZE_ROBOT = false;
     public static final boolean RUN_TRAJECTORY = true;
 

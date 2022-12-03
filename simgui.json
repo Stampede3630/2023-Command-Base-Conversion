@@ -22,7 +22,8 @@
     "types": {
       "/FMSInfo": "FMSInfo",
       "/Shuffleboard/SwerveDrive/field": "Field2d",
-      "/Shuffleboard/SwerveDrive/m_field": "Field2d"
+      "/Shuffleboard/SwerveDrive/m_field": "Field2d",
+      "/SmartDashboard/PPSwerveControllerCommand_field": "Field2d"
     },
     "windows": {
       "/Shuffleboard/SwerveDrive/m_field": {

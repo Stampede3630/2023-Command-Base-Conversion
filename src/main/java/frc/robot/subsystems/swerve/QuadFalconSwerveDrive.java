@@ -25,25 +25,27 @@ public class QuadFalconSwerveDrive {
       new SwerveModule.DriveMotor(SwerveConstants.FLDriveID,SwerveConstants.FLInvertType, SwerveConstants.FLDriveGains),
       new SwerveModule.SteeringMotor(SwerveConstants.FLSteerID, SwerveConstants.FLSteerGains), 
       new SwerveModule.SteeringSensor(SwerveConstants.FLSensorID,SwerveConstants.FLSensorOffset),
-      new Translation2d(SwerveConstants.WHEEL_BASE_METERS/2, -SwerveConstants.TRACK_WIDE/2));
+      new Translation2d(SwerveConstants.WHEEL_BASE_METERS/2, SwerveConstants.TRACK_WIDE/2));
    
     public SwerveModule FrontRightSwerveModule = new SwerveModule(
-        new SwerveModule.DriveMotor(SwerveConstants.FRDriveID, SwerveConstants.FRInvertType, SwerveConstants.FRDriveGains), 
-        new SwerveModule.SteeringMotor(SwerveConstants.FRSteerID, SwerveConstants.FRSteerGains), 
-        new SwerveModule.SteeringSensor(SwerveConstants.FRSensorID,SwerveConstants.FRSensorOffset),
-        new Translation2d(SwerveConstants.WHEEL_BASE_METERS/2, SwerveConstants.TRACK_WIDE/2) );
-
-    public SwerveModule BackRightSwerveModule = new SwerveModule(
-        new SwerveModule.DriveMotor(SwerveConstants.BRDriveID,SwerveConstants.BRInvertType, SwerveConstants.BRDriveGains) , 
-        new SwerveModule.SteeringMotor(SwerveConstants.BRSteerID, SwerveConstants.BRSteerGains), 
-        new SwerveModule.SteeringSensor(SwerveConstants.BRSensorID,SwerveConstants.BRSensorOffset),
-        new Translation2d(-SwerveConstants.WHEEL_BASE_METERS/2, SwerveConstants.TRACK_WIDE/2));
-
+      new SwerveModule.DriveMotor(SwerveConstants.FRDriveID, SwerveConstants.FRInvertType, SwerveConstants.FRDriveGains), 
+      new SwerveModule.SteeringMotor(SwerveConstants.FRSteerID, SwerveConstants.FRSteerGains), 
+      new SwerveModule.SteeringSensor(SwerveConstants.FRSensorID,SwerveConstants.FRSensorOffset),
+      new Translation2d(SwerveConstants.WHEEL_BASE_METERS/2, -SwerveConstants.TRACK_WIDE/2) );
+  
     public SwerveModule BackLeftSwerveModule = new SwerveModule(
-        new SwerveModule.DriveMotor(SwerveConstants.BLDriveID,SwerveConstants.BLInvertType, SwerveConstants.BLDriveGains), 
-        new SwerveModule.SteeringMotor(SwerveConstants.BLSteerID, SwerveConstants.BLSteerGains), 
-        new SwerveModule.SteeringSensor(SwerveConstants.BLSensorID,SwerveConstants.BLSensorOffset),
-        new Translation2d(-SwerveConstants.WHEEL_BASE_METERS/2, -SwerveConstants.TRACK_WIDE/2));
+      new SwerveModule.DriveMotor(SwerveConstants.BLDriveID,SwerveConstants.BLInvertType, SwerveConstants.BLDriveGains), 
+      new SwerveModule.SteeringMotor(SwerveConstants.BLSteerID, SwerveConstants.BLSteerGains), 
+      new SwerveModule.SteeringSensor(SwerveConstants.BLSensorID,SwerveConstants.BLSensorOffset),
+      new Translation2d(-SwerveConstants.WHEEL_BASE_METERS/2, SwerveConstants.TRACK_WIDE/2));
+    
+    public SwerveModule BackRightSwerveModule = new SwerveModule(
+      new SwerveModule.DriveMotor(SwerveConstants.BRDriveID,SwerveConstants.BRInvertType, SwerveConstants.BRDriveGains) , 
+      new SwerveModule.SteeringMotor(SwerveConstants.BRSteerID, SwerveConstants.BRSteerGains), 
+      new SwerveModule.SteeringSensor(SwerveConstants.BRSensorID,SwerveConstants.BRSensorOffset),
+      new Translation2d(-SwerveConstants.WHEEL_BASE_METERS/2, -SwerveConstants.TRACK_WIDE/2));
+
+
 
     public SwerveDriveKinematics m_kinematics = 
         new SwerveDriveKinematics(
