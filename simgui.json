@@ -27,6 +27,40 @@
     },
     "windows": {
       "/Shuffleboard/SwerveDrive/m_field": {
+        "Robot": {
+          "arrowSize": 75,
+          "length": 0.6159999966621399,
+          "width": 0.6259999871253967
+        },
+        "backLeft": {
+          "arrowSize": 10,
+          "arrowWeight": 0.10000000149011612,
+          "length": 0.20000000298023224,
+          "weight": 1.0,
+          "width": 0.20000000298023224
+        },
+        "backRight": {
+          "arrowSize": 10,
+          "arrowWeight": 0.10000000149011612,
+          "length": 0.20000000298023224,
+          "weight": 1.0,
+          "width": 0.20000000298023224
+        },
+        "frontLeft": {
+          "arrowSize": 10,
+          "arrowWeight": 0.10000000149011612,
+          "length": 0.20000000298023224,
+          "weight": 1.0,
+          "width": 0.20000000298023224
+        },
+        "frontRight": {
+          "arrowSize": 10,
+          "arrowWeight": 1.0,
+          "length": 0.20000000298023224,
+          "weight": 1.0,
+          "width": 0.20000000298023224
+        },
+        "image": "C:\\Users\\Sam\\Downloads\\2022-field.png",
         "window": {
           "visible": true
         }
@@ -55,6 +89,31 @@
         },
         "open": true
       }
+    }
+  },
+  "Plot": {
+    "Plot <0>": {
+      "plots": [
+        {
+          "axis": [
+            {
+              "autoFit": true
+            }
+          ],
+          "height": 338,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/Shuffleboard/SwerveDrive/getRobotAngleDegrees"
+            }
+          ]
+        }
+      ]
     }
   }
 }

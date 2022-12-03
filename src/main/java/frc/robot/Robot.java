@@ -56,12 +56,15 @@ public class Robot extends TimedRobot {
   @Override
   public void disabledPeriodic() {
     m_robotContainer.setDriveTraintoCoast();
+    m_robotContainer.setInitialOdometry();
   }
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
+    
     m_robotContainer.setDriveTrainToBrake();
+    m_robotContainer.setInitialOdometry();
     m_robotContainer.getAutonomousCommand().schedule();
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {

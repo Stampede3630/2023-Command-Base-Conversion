@@ -75,6 +75,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   @Override
   public void periodic() {
+    prevRobotPose = m_odometry.getEstimatedPosition();
     if(RobotBase.isSimulation()) {
       for(SwerveModule module : m_driveTrain.SwerveModuleList) {
         module.simModule.simulationPeriodic(deltaTime);
@@ -85,11 +86,12 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     prevTime = Timer.getFPGATimestamp();
     //System.out.println(deltaTime);
 
-    prevRobotPose = robotPose;
-    robotPose = updateOdometry();
+    
+   
     if(RobotBase.isSimulation()) {
       simNavx.update(robotPose, prevRobotPose, deltaTime);
     }
+    robotPose = updateOdometry();
     //commented this line out due to 
     // m_driveTrain.checkAndSetSwerveCANStatus();
     drawRobotOnField(m_field);
@@ -180,7 +182,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   }
 
   public void resetOdometry(Pose2d newPose){
-    m_odometry.resetPosition(getRobotAngle(), m_driveTrain.getModulePositions(), newPose);
+    m_odometry.resetPosition(newPose.getRotation(), m_driveTrain.getModulePositions(), newPose);
   }
 
   public SwerveDriveKinematics getKinematics() {
