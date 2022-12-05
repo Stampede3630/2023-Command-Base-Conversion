@@ -74,6 +74,9 @@
       }
     },
     "transitory": {
+      "LiveWindow": {
+        "open": true
+      },
       "Preferences": {
         "open": true
       },
@@ -113,7 +116,10 @@
             }
           ]
         }
-      ]
+      ],
+      "window": {
+        "visible": false
+      }
     }
   }
 }
