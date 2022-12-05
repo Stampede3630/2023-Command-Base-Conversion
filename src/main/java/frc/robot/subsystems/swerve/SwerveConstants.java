@@ -3,7 +3,7 @@ package frc.robot.subsystems.swerve;
 import com.ctre.phoenix.motorcontrol.TalonFXInvertType;
 public final class SwerveConstants {
     public static final boolean OPTIMIZESTEERING = true;
-    public static final boolean CHARACTERIZE_ROBOT = false;
+    public static final boolean BOT_IS_NOT_CHARACTERIZED = false;
     public static final boolean RUN_TRAJECTORY = true;
 
     //SWERVE MODULE CHARACTERISTICS
@@ -90,7 +90,7 @@ public final class SwerveConstants {
     public static final double METERSperROBOT_REVOLUTION =  2*Math.PI*pythagoreanTheorem(TRACK_WIDE, WHEEL_BASE_METERS);
     public static final double MAX_SPEED_METERSperSECOND = MAX_SPEED_TICKSper100MS/SECONDSper100MS/DRIVE_MOTOR_TICKSperREVOLUTION*METERSperWHEEL_REVOLUTION;
     public static final double MAX_SPEED_RADIANSperSECOND = MAX_SPEED_METERSperSECOND/METERSperROBOT_REVOLUTION*(2*Math.PI);
-    public static final double TICKSperTALONFX_STEERING_DEGREE = TICKSperTALONFX_Rotation*STEERING_MOTOR_GEARING/360;
+    public static final double TICKSperTALONFX_STEERING_DEGREE = TICKSperTALONFX_Rotation*STEERING_MOTOR_GEARING/360.0;
     
     public static class Gains {
         public final double kP;

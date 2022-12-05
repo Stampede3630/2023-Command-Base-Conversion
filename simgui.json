@@ -23,6 +23,8 @@
       "/FMSInfo": "FMSInfo",
       "/Shuffleboard/SwerveDrive/field": "Field2d",
       "/Shuffleboard/SwerveDrive/m_field": "Field2d",
+      "/Shuffleboard/SwerveDrive/switchToIntegratedSteerCommand": "Command",
+      "/Shuffleboard/SwerveDrive/switchToRemoteSteerCommand": "Command",
       "/SmartDashboard/PPSwerveControllerCommand_field": "Field2d"
     },
     "windows": {
@@ -60,7 +62,6 @@
           "weight": 1.0,
           "width": 0.20000000298023224
         },
-        "image": "C:\\Users\\Sam\\Downloads\\2022-field.png",
         "window": {
           "visible": true
         }
@@ -88,7 +89,13 @@
           "field": {
             "open": true
           },
-          "open": true
+          "open": true,
+          "switchToIntegratedSteerCommand": {
+            "open": true
+          },
+          "switchToRemoteSteerCommand": {
+            "open": true
+          }
         },
         "open": true
       }

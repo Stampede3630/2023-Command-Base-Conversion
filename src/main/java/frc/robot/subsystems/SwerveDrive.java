@@ -23,8 +23,10 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.swerve.QuadFalconSwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
@@ -57,7 +59,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     //SwerveDrive Setup
     m_driveTrain = new QuadFalconSwerveDrive();
     m_driveTrain.checkAndSetSwerveCANStatus();
-    m_driveTrain.checkAndZeroSwerveAngle();
+    m_driveTrain.checkAndSeedALLSwerveAngles();
     
     //helps visualize robot on virtual field
     m_field = new Field2d();
@@ -75,6 +77,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   @Override
   public void periodic() {
+    m_driveTrain.checkAndSeedALLSwerveAngles();
     prevRobotPose = m_odometry.getEstimatedPosition();
     if(RobotBase.isSimulation()) {
       for(SwerveModule module : m_driveTrain.SwerveModuleList) {
@@ -201,13 +204,13 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     field.setRobotPose(m_odometry.getEstimatedPosition());
 
     field.getObject("frontLeft").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontLeftSwerveModule.mTranslation2d, m_driveTrain.FrontLeftSwerveModule.getPosition().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontLeftSwerveModule.moduleXYTranslation, m_driveTrain.FrontLeftSwerveModule.getPosition().angle)));
     field.getObject("frontRight").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontRightSwerveModule.mTranslation2d, m_driveTrain.FrontRightSwerveModule.getPosition().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.FrontRightSwerveModule.moduleXYTranslation, m_driveTrain.FrontRightSwerveModule.getPosition().angle)));
     field.getObject("backLeft").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackLeftSwerveModule.mTranslation2d, m_driveTrain.BackLeftSwerveModule.getPosition().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackLeftSwerveModule.moduleXYTranslation, m_driveTrain.BackLeftSwerveModule.getPosition().angle)));
     field.getObject("backRight").setPose(
-      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackRightSwerveModule.mTranslation2d, m_driveTrain.BackRightSwerveModule.getPosition().angle)));
+      m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackRightSwerveModule.moduleXYTranslation, m_driveTrain.BackRightSwerveModule.getPosition().angle)));
   }
 
   public void setToBrake(){
@@ -228,6 +231,16 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   private double convertToRadiansPerSecond(double _input){
     return _input*SwerveConstants.MAX_SPEED_RADIANSperSECOND;
+  }
+
+
+  public CommandBase switchToRemoteSteerCommand(){
+    return new InstantCommand(() -> m_driveTrain.switchToRemoteSteering(),this);
+  }
+
+
+  public CommandBase switchToIntegratedSteerCommand(){
+    return new InstantCommand(() -> m_driveTrain.switchToIntegratedSteer(),this);
   }
 
 }

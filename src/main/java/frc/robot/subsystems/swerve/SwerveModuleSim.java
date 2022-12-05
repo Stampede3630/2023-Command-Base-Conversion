@@ -2,6 +2,8 @@ package frc.robot.subsystems.swerve;
 
 import com.ctre.phoenix.motorcontrol.TalonFXSimCollection;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
+import com.ctre.phoenix.sensors.CANCoder;
+import com.ctre.phoenix.sensors.CANCoderSimCollection;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -12,6 +14,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import frc.robot.Robot;
+import frc.robot.subsystems.swerve.SwerveModule.SteeringSensor;
 
 
 public class SwerveModuleSim {
@@ -20,8 +23,11 @@ public class SwerveModuleSim {
     public static final double kWheelCircumference = kWheelDiameter*Math.PI;
     // Simulation
     private final TalonFXSimCollection driveMotorSim;
+    private final TalonFXSimCollection steerMotorSim;
+    private final CANCoderSimCollection steerSensorCANCoderSim;
     private final TalonFX driveMotor;
     private final TalonFX steerMotor;
+    private final CANCoder steerSensorCANCoder;
     public static final SimpleMotorFeedforward kDriveFF = new SimpleMotorFeedforward( // real
     0.2, // Voltage to break static friction
     2.25, // Volts per meter per second
@@ -41,18 +47,20 @@ public class SwerveModuleSim {
         DCMotor.getFalcon500(1),
         SwerveConstants.DRIVE_MOTOR_GEARING
     );
-    private final TalonFXSimCollection steerMotorSim;
+
     private final FlywheelSim steeringSim = new FlywheelSim(
         LinearSystemId.identifyVelocitySystem(kSteerFF.kv, kSteerFF.ka),
         DCMotor.getFalcon500(1),
         SwerveConstants.STEERING_MOTOR_GEARING
     );
-    public SwerveModuleSim(TalonFX driveMotor, TalonFX steerMotor) {
+    public SwerveModuleSim(TalonFX driveMotor, TalonFX steerMotor, CANCoder steerSensorCANCoder) {
         this.driveMotor= driveMotor;
         this.steerMotor= steerMotor;
+        this.steerSensorCANCoder = steerSensorCANCoder;
 
         driveMotorSim = driveMotor.getSimCollection();
         steerMotorSim = steerMotor.getSimCollection();
+        steerSensorCANCoderSim = steerSensorCANCoder.getSimCollection();
     }
 
     public void simulationPeriodic(double deltaTime){
@@ -82,10 +90,12 @@ public class SwerveModuleSim {
         double steerMotorPositionDeltaNative = steerMotorVelocityNative*10*deltaTime;
         steerMotorSim.setIntegratedSensorVelocity((int)steerMotorVelocityNative);
         steerMotorSim.addIntegratedSensorPosition((int)(steerMotorPositionDeltaNative));
-        steerMotorSim.setSupplyCurrent(steeringSim.getCurrentDrawAmps()/2);
-        
-        //steerEncoderSim.setVelocity((int)(rotationsToVelocity(steeringSim.getAngularVelocityRPM()/60, 1)*2));
-        //steerEncoderSim.setRawPosition((int)(getIntegratedHeading().getDegrees()/360.0*4096));
+        //System.out.println(steerMotorPositionDeltaNative);
+        //steerMotorSim.setSupplyCurrent(steeringSim.getCurrentDrawAmps()/2);
+        //steerSensorCANCoderSim.setVelocity((int)steerMotorVelocityNative);
+        //steerSensorCANCoderSim.addPosition((int)(steerMotorPositionDeltaNative));
+        //steerSensorCANCoderSim.setVelocity((int)(rotationsToVelocity(steeringSim.getAngularVelocityRPM()/60, 1)*2));
+        //steerSensorCANCoderSim.setRawPosition((int)(getIntegratedHeading().getDegrees()/360.0*4096));
 
         driveMotorSim.setBusVoltage(RobotController.getBatteryVoltage());
         steerMotorSim.setBusVoltage(RobotController.getBatteryVoltage());

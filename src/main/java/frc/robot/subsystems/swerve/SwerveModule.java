@@ -8,6 +8,7 @@ import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.RemoteSensorSource;
 import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
+import com.ctre.phoenix.motorcontrol.TalonFXFeedbackDevice;
 import com.ctre.phoenix.motorcontrol.TalonFXInvertType;
 import com.ctre.phoenix.motorcontrol.can.TalonFXConfiguration;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
@@ -28,13 +29,15 @@ import edu.wpi.first.wpilibj.RobotBase;
 
 
 public class SwerveModule {
-    public final SteeringMotor mSteeringMotor;
-    public final SteeringSensor mSteeringSensor;
-    public final DriveMotor mDriveMotor;
-    public final Translation2d mTranslation2d;
+    public final SteeringMotor steeringMotor;
+    public final SteeringSensor steeringSensor;
+    public final DriveMotor driveMotor;
+    public final Translation2d moduleXYTranslation;
     public final SwerveModuleSim simModule;
-    public boolean hasSwerveZeroingOccurred=false;
-    public double swerveZeroingRetryCount = 0;
+    public String steerMode = "INTEGRATED";
+    public boolean hasSwerveSeedingOccurred=false;
+    public boolean hasCANCoderBeenSetToAbs = false;
+    public double swerveSeedingRetryCount = 0;
     public  StatorCurrentLimitConfiguration steerCurrentLimitConfigurationEnable;
     public  StatorCurrentLimitConfiguration steerCurrentLimitConfigurationDisable;
     public  StatorCurrentLimitConfiguration driveCurrentLimitConfigurationEnable;
@@ -43,10 +46,10 @@ public class SwerveModule {
     public static SimpleMotorFeedforward driveMotorFeedforward = new SimpleMotorFeedforward(SwerveConstants.kS, SwerveConstants.kV, SwerveConstants.kA);
 
     /**
-     * @param _DriveMotor
-     * @param _SteeringMotor
-     * @param _SteeringSensor
-     * @param _ModuleXYPosition X is NorthSouth and Y is EastWest
+     * @param driveMotor
+     * @param steeringMotor
+     * @param steeringSensor
+     * @param moduleXYTranslation X is NorthSouth and Y is EastWest
      *     
      * Helpful hints:
      * 1. when determining your steering motor offsets first rotate 
@@ -58,17 +61,23 @@ public class SwerveModule {
      *    may be slightly to vastly different
      * 
      */
-    public SwerveModule (DriveMotor _DriveMotor, SteeringMotor _SteeringMotor, SteeringSensor _SteeringSensor, Translation2d _ModuleXYPosition){
-        mSteeringMotor = _SteeringMotor;
-        mSteeringSensor = _SteeringSensor;
-        mDriveMotor = _DriveMotor;
-        mTranslation2d = _ModuleXYPosition;
-        
+    public SwerveModule (DriveMotor driveMotor, SteeringMotor steeringMotor, SteeringSensor steeringSensor, Translation2d moduleXYTranslation){
+        this.steeringMotor = steeringMotor;
+        this.steeringSensor = steeringSensor;
+        this.driveMotor = driveMotor;
+        this.moduleXYTranslation = moduleXYTranslation;
+
         if (RobotBase.isSimulation()) {
-            simModule = new SwerveModuleSim(_DriveMotor, _SteeringMotor);
+            simModule = new SwerveModuleSim(driveMotor, steeringMotor, steeringSensor);
         } else {
             simModule = null;
         }
+
+        swerveModuleInit();
+    }
+    
+    private void swerveModuleInit(){
+
 
         steerCurrentLimitConfigurationEnable  = new StatorCurrentLimitConfiguration();
         steerCurrentLimitConfigurationDisable = new StatorCurrentLimitConfiguration();
@@ -92,56 +101,54 @@ public class SwerveModule {
         //Commented this out for boot speed savings
         //mDriveMotor.configFactoryDefault();
 
-        mDriveMotor.setInverted(mDriveMotor.kWheelDirectionType);
-        mDriveMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, 0, SwerveConstants.kDefaultTimeout);
-        mDriveMotor.configStatorCurrentLimit(driveCurrentLimitConfigurationEnable, 1000);
-        mDriveMotor.configStatorCurrentLimit(driveCurrentLimitConfigurationDisable, 1000);
-        //mDriveMotor.config_kF(Constants.kDefaultPIDSlotID, mDriveMotor.kGAINS.kF, Constants.kDefaultTimeout);
-        //mDriveMotor.config_kP(Constants.kDefaultPIDSlotID, mDriveMotor.kGAINS.kP, Constants.kDefaultTimeout);
-        //mDriveMotor.config_kI(Constants.kDefaultPIDSlotID, mDriveMotor.kGAINS.kI, Constants.kDefaultTimeout);
-        //mDriveMotor.config_kD(Constants.kDefaultPIDSlotID, mDriveMotor.kGAINS.kD, Constants.kDefaultTimeout);  
-        //mDriveMotor.config_IntegralZone(0, mDriveMotor.kGAINS.kIzone);
+        driveMotor.setInverted(driveMotor.kWheelDirectionType);
+        driveMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, 0, SwerveConstants.kDefaultTimeout);
+        driveMotor.configStatorCurrentLimit(driveCurrentLimitConfigurationDisable, 1000);
 
         //Setup the Steering Sensor
         CANCoderConfiguration myCanCoderConfig = new CANCoderConfiguration();
         myCanCoderConfig.initializationStrategy = SensorInitializationStrategy.BootToAbsolutePosition;
         myCanCoderConfig.sensorDirection = false;
-        myCanCoderConfig.magnetOffsetDegrees = mSteeringSensor.kOffsetDegrees;
-        myCanCoderConfig.sensorCoefficient = 360/4096;
+        myCanCoderConfig.magnetOffsetDegrees = steeringSensor.kOffsetDegrees;
+        myCanCoderConfig.sensorCoefficient = 360.0/4096.0;
         myCanCoderConfig.unitString = "deg";
         myCanCoderConfig.sensorTimeBase= SensorTimeBase.PerSecond;
         myCanCoderConfig.absoluteSensorRange = AbsoluteSensorRange.Signed_PlusMinus180;
         
         
-        if(mSteeringSensor.configAllSettings(myCanCoderConfig,1000)==ErrorCode.OK){
-            System.out.println("CANCoder " + mSteeringSensor.getDeviceID() + " configured.");
+        if(steeringSensor.configAllSettings(myCanCoderConfig,1000)==ErrorCode.OK){
+            System.out.println("CANCoder " + steeringSensor.getDeviceID() + " configured.");
         } else {
-            System.out.println("WARNING! CANCoder " + mSteeringSensor.getDeviceID() + " NOT configured correctly!");
+            System.out.println("WARNING! CANCoder " + steeringSensor.getDeviceID() + " NOT configured correctly! Error: " + steeringSensor.getLastError());
         }
-        mSteeringSensor.setPositionToAbsolute(1000);
 
+        //First Attempt at seeding
+        if(steeringSensor.setPositionToAbsolute(1000)==ErrorCode.OK){
+            hasCANCoderBeenSetToAbs = true;
+        }
+        
         //Setup the the closed-loop PID for the steering module loop
         
         TalonFXConfiguration mySteeringMotorConfiguration = new TalonFXConfiguration();
         mySteeringMotorConfiguration.feedbackNotContinuous = false;
-        mySteeringMotorConfiguration.slot0.kP = mSteeringMotor.kGAINS.kP;
-        mySteeringMotorConfiguration.slot0.kI = mSteeringMotor.kGAINS.kI;
-        mySteeringMotorConfiguration.slot0.kD = mSteeringMotor.kGAINS.kD;
-        mySteeringMotorConfiguration.slot0.kF = mSteeringMotor.kGAINS.kF;
+        mySteeringMotorConfiguration.slot0.kP = steeringMotor.kGAINS.kP;
+        mySteeringMotorConfiguration.slot0.kI = steeringMotor.kGAINS.kI;
+        mySteeringMotorConfiguration.slot0.kD = steeringMotor.kGAINS.kD;
+        mySteeringMotorConfiguration.slot0.kF = steeringMotor.kGAINS.kF;
         mySteeringMotorConfiguration.slot0.allowableClosedloopError = SwerveConstants.kDefaultClosedLoopError;
         mySteeringMotorConfiguration.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder;
-        mySteeringMotorConfiguration.remoteFilter0.remoteSensorDeviceID= mSteeringSensor.getDeviceID();
+        mySteeringMotorConfiguration.remoteFilter0.remoteSensorDeviceID= steeringSensor.getDeviceID();
 
-        if(mSteeringMotor.configAllSettings(mySteeringMotorConfiguration,1000)==ErrorCode.OK)   {
-            System.out.println("Steer Motor " + mSteeringMotor.getDeviceID() + " configured.");
+        if(steeringMotor.configAllSettings(mySteeringMotorConfiguration,1000)==ErrorCode.OK)   {
+            System.out.println("Steer Motor " + steeringMotor.getDeviceID() + " configured.");
         } else {
-            System.out.println("WARNING! Steer Motor  " + mSteeringMotor.getDeviceID() + " NOT configured correctly!");
+            System.out.println("WARNING! Steer Motor  " + steeringMotor.getDeviceID() + " NOT configured correctly!");
         }
-        mSteeringMotor.configStatorCurrentLimit(steerCurrentLimitConfigurationEnable, 1000);
-        mSteeringMotor.configStatorCurrentLimit(steerCurrentLimitConfigurationDisable, 1000);
-        mSteeringMotor.setInverted(TalonFXInvertType.Clockwise);
-        mSteeringMotor.configSelectedFeedbackCoefficient(1/SwerveConstants.TICKSperTALONFX_STEERING_DEGREE,0,SwerveConstants.kDefaultTimeout);
-        mSteeringMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor,0,SwerveConstants.kDefaultTimeout);
+
+        steeringMotor.configStatorCurrentLimit(steerCurrentLimitConfigurationDisable, 1000);
+        steeringMotor.setInverted(TalonFXInvertType.Clockwise);
+        steeringMotor.configSelectedFeedbackCoefficient(1.0/SwerveConstants.TICKSperTALONFX_STEERING_DEGREE,0,SwerveConstants.kDefaultTimeout);
+        steeringMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor,0,SwerveConstants.kDefaultTimeout);
     }
 
     /**
@@ -149,121 +156,139 @@ public class SwerveModule {
      */
     public void setSwerveModuleCANStatusFrames(){
         
-        if(mDriveMotor.hasResetOccurred()){
+        if(driveMotor.hasResetOccurred()){
             int mycounter = 0;
             
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_1_General, 255,1000) !=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_3_Quadrature, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_4_AinTempVbat, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_6_Misc, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_7_CommStatus, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_8_PulseWidth, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_10_Targets, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_11_UartGadgeteer, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_12_Feedback1, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_Brushless_Current, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_14_Turn_PIDF1, 255,100)!=ErrorCode.OK) {mycounter++;}
-            if(mDriveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_15_FirmwareApiStatus, 255,100)!=ErrorCode.OK) {mycounter++;}
-            System.out.println("RESET DETECTED FOR TALONFX " + mDriveMotor.getDeviceID() + " Errors: " + mycounter);
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_1_General, 255,1000) !=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_3_Quadrature, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_4_AinTempVbat, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_6_Misc, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_7_CommStatus, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_8_PulseWidth, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_10_Targets, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_11_UartGadgeteer, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_12_Feedback1, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_Brushless_Current, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_14_Turn_PIDF1, 255,100)!=ErrorCode.OK) {mycounter++;}
+            if(driveMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_15_FirmwareApiStatus, 255,100)!=ErrorCode.OK) {mycounter++;}
+            System.out.println("RESET DETECTED FOR TALONFX " + driveMotor.getDeviceID() + " Errors: " + mycounter);
         }
-        if(mSteeringMotor.hasResetOccurred()){
+        if(steeringMotor.hasResetOccurred()){
             int mycounter = 0;
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_1_General, 255,1000) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_3_Quadrature, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_4_AinTempVbat, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_6_Misc, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_7_CommStatus, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_8_PulseWidth, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_10_Targets, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_11_UartGadgeteer, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_12_Feedback1, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_Brushless_Current, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_14_Turn_PIDF1, 255,100) !=ErrorCode.OK) {mycounter++;}
-            if(mSteeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_15_FirmwareApiStatus, 255,100) !=ErrorCode.OK) {mycounter++;}
-            System.out.println("RESET DETECTED FOR TALONFX " + mSteeringMotor.getDeviceID()+ " Errors: " + mycounter);
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_1_General, 255,1000) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_3_Quadrature, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_4_AinTempVbat, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_6_Misc, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_7_CommStatus, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_8_PulseWidth, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_10_Targets, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_11_UartGadgeteer, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_12_Feedback1, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_Brushless_Current, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_14_Turn_PIDF1, 255,100) !=ErrorCode.OK) {mycounter++;}
+            if(steeringMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_15_FirmwareApiStatus, 255,100) !=ErrorCode.OK) {mycounter++;}
+            System.out.println("RESET DETECTED FOR TALONFX " + steeringMotor.getDeviceID()+ " Errors: " + mycounter);
         }
     }
 
     public void enableCurrentLimiting(){
-        mDriveMotor.configStatorCurrentLimit(driveCurrentLimitConfigurationEnable, 250);
-        mSteeringMotor.configStatorCurrentLimit(steerCurrentLimitConfigurationEnable, 250);
+        driveMotor.configStatorCurrentLimit(driveCurrentLimitConfigurationEnable, 250);
+        steeringMotor.configStatorCurrentLimit(steerCurrentLimitConfigurationEnable, 250);
     }
 
     public void disableCurrentLimiting(){
-        mDriveMotor.configStatorCurrentLimit(driveCurrentLimitConfigurationDisable, 250);
-        mSteeringMotor.configStatorCurrentLimit(steerCurrentLimitConfigurationDisable, 250);
+        driveMotor.configStatorCurrentLimit(driveCurrentLimitConfigurationDisable, 250);
+        steeringMotor.configStatorCurrentLimit(steerCurrentLimitConfigurationDisable, 250);
     }
 
-    public void swerveDisabledInit(){
-        mDriveMotor.setNeutralMode(NeutralMode.Coast);
-        mSteeringMotor.setNeutralMode(NeutralMode.Coast);
+    public void setModuleToCoast(){
+        driveMotor.setNeutralMode(NeutralMode.Coast);
+        steeringMotor.setNeutralMode(NeutralMode.Coast);
     }
-    public void swerveEnabledInit(){
-        mDriveMotor.setNeutralMode(NeutralMode.Brake);
-        mSteeringMotor.setNeutralMode(NeutralMode.Brake);
+    public void setModuleToBrake(){
+        driveMotor.setNeutralMode(NeutralMode.Brake);
+        steeringMotor.setNeutralMode(NeutralMode.Brake);
     }
 
-    public void zeroSwerveAngle() {
-        if(!hasSwerveZeroingOccurred && swerveZeroingRetryCount >=10) {
-            if(mSteeringSensor.setPositionToAbsolute(1000)==ErrorCode.OK){
-                if((int) mSteeringSensor.configGetParameter(ParamEnum.eSensorInitStrategy,0, 1000) == SensorInitializationStrategy.BootToZero.value) {
-                    if(mSteeringSensor.configSensorInitializationStrategy(SensorInitializationStrategy.BootToAbsolutePosition,1000).value!=ErrorCode.OK.value) {
-                        System.out.println("ERROR: COULDN'T SET THE INITIALIZATION STRATEGY! CANCODER: " + mSteeringSensor.getDeviceID());
-                    } else {
-                        System.out.println("ERROR: INITIALIZATION STRATEGY SET! REBOOT ROBOT! CANCODER: " + mSteeringSensor.getDeviceID());
-                        mSteeringMotor.setSelectedSensorPosition(mSteeringSensor.getPosition(),0,1000);
-                        System.out.println("ERROR: ZEROED SENSOR VALUES FOR CANCODER ANYWAY " + mSteeringSensor.getDeviceID() + " " + mSteeringSensor.getPosition());
-                    }
-                } else if(hasSwerveZeroingOccurred || mSteeringMotor.setSelectedSensorPosition(mSteeringSensor.getPosition(),0,1000).value==0){
-                    hasSwerveZeroingOccurred = true;
-                    System.out.println("Zeroed Sensor values for " + mSteeringSensor.getDeviceID() + " " + mSteeringSensor.getPosition());
-                    mSteeringSensor.setStatusFramePeriod(CANCoderStatusFrame.SensorData, 255, 1000);
+    /**
+     * This method takes our best crack at seeding the angle from CANCoder to
+     * Integrated Sensor on the Steering Motor (cuz faster/snappier).  
+     */
+    public void seedCANCoderAngleToMotorAngle() {
+
+        // FIRST
+        if(!hasSwerveSeedingOccurred && swerveSeedingRetryCount <=50) {
+            if(!hasCANCoderBeenSetToAbs && steeringSensor.getAbsolutePosition() != steeringSensor.getPosition()){
+                if(steeringSensor.setPositionToAbsolute(1000)==ErrorCode.OK) {
+                    hasCANCoderBeenSetToAbs = true;
                 } else {
-                    System.out.println("ERROR: COULDNT ZERO MODULE: " + mSteeringMotor.getDeviceID());
+                    swerveSeedingRetryCount++;
+                    System.out.println("ERROR: COULDN'T SET THE CANCODER POSITION TO ABSOLUTE ANGLE! CANCODER: " + steeringSensor.getDeviceID() + " ERROR: " + steeringSensor.getLastError());
                 }
-            }  else {
-                swerveZeroingRetryCount = 0;
-                System.out.println("ERROR: COULDNT SET POSITION TO ABSOLUTE! CANCODER: " + mSteeringSensor.getDeviceID());
+            } else if(steeringMotor.setSelectedSensorPosition(steeringSensor.getPosition(),0,1000) == ErrorCode.OK){
+                    System.out.println("Seeded Sensor values from " + steeringSensor.getDeviceID() + ": " + steeringSensor.getPosition() + " to " + steeringMotor.getDeviceID() + ": " + steeringMotor.getSelectedSensorPosition());
+                    steeringSensor.setStatusFramePeriod(CANCoderStatusFrame.SensorData, 255, 1000);
+                    if(steeringSensor.getPosition()- steeringMotor.getSelectedSensorPosition() < 2.0){
+                        hasSwerveSeedingOccurred=true;
+                    }
+            } else {
+                System.out.println("ERROR: COULDNT SEED VALUES FOR STEER MOTOR: " + steeringMotor.getDeviceID() + " RETRY COUNT: " + swerveSeedingRetryCount);
+                swerveSeedingRetryCount++;
             }
-        } else if (!hasSwerveZeroingOccurred && swerveZeroingRetryCount <10) {
-            swerveZeroingRetryCount++;
+
+        }  else if (swerveSeedingRetryCount >50 && !steerMode.equals("REMOTE")) {
+            System.out.println("ERROR: COULDNT SET POSITION TO ABSOLUTE! CANCODER: " + steeringSensor.getDeviceID());
+            switchToCANCoderSteer();
         }
+
     }
 
-    public void REzeroSwerveAngle() {
-        mSteeringSensor.setStatusFramePeriod(CANCoderStatusFrame.SensorData, 10, 1000);
-        mSteeringMotor.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0,0,SwerveConstants.kDefaultTimeout);       
+    public String getSteeringSelectedSensor(){
+        return steerMode;
+    }
+
+    public void switchToCANCoderSteer(){
+        steeringSensor.setStatusFramePeriod(CANCoderStatusFrame.SensorData, 10, 1000);
+        steeringMotor.configSelectedFeedbackSensor(TalonFXFeedbackDevice.RemoteSensor0,0,255);
+        steerMode = "REMOTE";
+    }
+
+    public void switchToIntegratedSteer(){
+        steeringMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor,0,SwerveConstants.kDefaultTimeout); 
+        hasSwerveSeedingOccurred = false;  
+        swerveSeedingRetryCount = 0;  
+
+        steerMode = "INTEGRATED";
+        seedCANCoderAngleToMotorAngle();
+
     }
     
     public void setDesiredState(SwerveModuleState desiredState){
         SwerveModuleState kState = desiredState;
         if(Preferences.getBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING)){
-            kState = optimize(desiredState, new Rotation2d(Math.toRadians(mSteeringMotor.getSelectedSensorPosition())));
+            kState = optimize(desiredState, new Rotation2d(Math.toRadians(steeringMotor.getSelectedSensorPosition())));
         }
         
         double convertedspeed = kState.speedMetersPerSecond*(SwerveConstants.SECONDSper100MS)*SwerveConstants.DRIVE_MOTOR_TICKSperREVOLUTION/(SwerveConstants.METERSperWHEEL_REVOLUTION);           
         setSteeringAngle(kState.angle.getDegrees());
         
-        if (SwerveConstants.CHARACTERIZE_ROBOT){
+        if (SwerveConstants.BOT_IS_NOT_CHARACTERIZED){
 
-            mDriveMotor.set(ControlMode.PercentOutput, kState.speedMetersPerSecond/SwerveConstants.MAX_SPEED_METERSperSECOND); 
+            driveMotor.set(ControlMode.PercentOutput, kState.speedMetersPerSecond/SwerveConstants.MAX_SPEED_METERSperSECOND); 
             
-        } else if(SwerveConstants.kS == 0 && SwerveConstants.kV == 0) {
-            
-            mDriveMotor.set(ControlMode.Velocity, convertedspeed);
         } else {
             //System.out.println(driveMotorFeedforward.calculate(kState.speedMetersPerSecond));
-            mDriveMotor.setVoltage(driveMotorFeedforward.calculate(kState.speedMetersPerSecond)) ;              
+            driveMotor.setVoltage(driveMotorFeedforward.calculate(kState.speedMetersPerSecond)) ;              
         }
         
     }
 
     public SwerveModuleState getSwerveModuleState(){
-        return new SwerveModuleState(mDriveMotor.getSelectedSensorVelocity()/SwerveConstants.SECONDSper100MS/SwerveConstants.DRIVE_MOTOR_TICKSperREVOLUTION*SwerveConstants.METERSperWHEEL_REVOLUTION, Rotation2d.fromDegrees(mSteeringMotor.getSelectedSensorPosition()));
+        return new SwerveModuleState(driveMotor.getSelectedSensorVelocity()/SwerveConstants.SECONDSper100MS/SwerveConstants.DRIVE_MOTOR_TICKSperREVOLUTION*SwerveConstants.METERSperWHEEL_REVOLUTION, Rotation2d.fromDegrees(steeringMotor.getSelectedSensorPosition()));
     }
 
       /**
@@ -273,7 +298,7 @@ public class SwerveModule {
      */
     public SwerveModulePosition getPosition() {
         return new SwerveModulePosition(
-            mDriveMotor.getSelectedSensorPosition()/SwerveConstants.DRIVE_MOTOR_TICKSperREVOLUTION*SwerveConstants.METERSperWHEEL_REVOLUTION, new Rotation2d(Math.toRadians(mSteeringMotor.getSelectedSensorPosition())));
+            driveMotor.getSelectedSensorPosition()/SwerveConstants.DRIVE_MOTOR_TICKSperREVOLUTION*SwerveConstants.METERSperWHEEL_REVOLUTION, new Rotation2d(Math.toRadians(steeringMotor.getSelectedSensorPosition())));
     }
     
     /** 
@@ -290,7 +315,7 @@ public class SwerveModule {
      */
     public void setSteeringAngle(double _angle){
         //double newAngleDemand = _angle;
-        double currentSensorPosition = mSteeringMotor.getSelectedSensorPosition();
+        double currentSensorPosition = steeringMotor.getSelectedSensorPosition();
         double remainder = Math.IEEEremainder(currentSensorPosition, 360);
         double newAngleDemand = _angle + currentSensorPosition -remainder;
         
@@ -300,12 +325,10 @@ public class SwerveModule {
           } else if (newAngleDemand - currentSensorPosition < -180.1){
               newAngleDemand += 360;
           }
-        mSteeringMotor.set(ControlMode.Position, newAngleDemand );
-
-        
+        steeringMotor.set(ControlMode.Position, newAngleDemand );
     }
   
-    public static SwerveModuleState optimize(
+    public SwerveModuleState optimize(
         SwerveModuleState desiredState, Rotation2d currentAngle) {
       var delta = desiredState.angle.minus(currentAngle);
       if (Math.abs(delta.getDegrees()) > 90.0) {  //SJV: If this doesn'twork try 360
@@ -345,5 +368,7 @@ public class SwerveModule {
             kOffsetDegrees = _offsetDegrees;
          }       
     }
+
+
   
 }
