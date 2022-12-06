@@ -13,25 +13,20 @@ import com.pathplanner.lib.auto.PIDConstants;
 import com.pathplanner.lib.auto.SwerveAutoBuilder;
 import com.pathplanner.lib.PathConstraints;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
+
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+
 import edu.wpi.first.wpilibj2.command.WaitCommand;
-import edu.wpi.first.wpilibj2.command.button.NetworkButton;
+
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.SwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import io.github.oblarg.oblog.Logger;
 import io.github.oblarg.oblog.annotations.Config;
-import io.github.oblarg.oblog.annotations.Log;
+
 
 
 /**
@@ -48,7 +43,6 @@ public class RobotContainer {
   private final int xBoxYAxis = XboxController.Axis.kLeftX.value;
   private final int xBoxRot = XboxController.Axis.kRightX.value;
   private boolean isIntegratedSteering = true;
-  private final NetworkButton isIntegratedSteeringButton = new NetworkButton("Shuffleboard/RobotContainer", "isIntegratedSteering");
   SwerveAutoBuilder autoBuilder;
   ArrayList<PathPlannerTrajectory> pathGroup;
 
