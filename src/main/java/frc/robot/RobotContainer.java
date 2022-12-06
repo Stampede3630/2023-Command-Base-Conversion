@@ -25,9 +25,13 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
+import edu.wpi.first.wpilibj2.command.button.NetworkButton;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.SwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import io.github.oblarg.oblog.Logger;
+import io.github.oblarg.oblog.annotations.Config;
+import io.github.oblarg.oblog.annotations.Log;
 
 
 /**
@@ -43,8 +47,11 @@ public class RobotContainer {
   private final int xBoxXAxis = XboxController.Axis.kLeftY.value;
   private final int xBoxYAxis = XboxController.Axis.kLeftX.value;
   private final int xBoxRot = XboxController.Axis.kRightX.value;
+  private boolean isIntegratedSteering = true;
+  private final NetworkButton isIntegratedSteeringButton = new NetworkButton("Shuffleboard/RobotContainer", "isIntegratedSteering");
   SwerveAutoBuilder autoBuilder;
   ArrayList<PathPlannerTrajectory> pathGroup;
+
 
      
 
@@ -58,43 +65,42 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-      Preferences.setBoolean("pFieldRelative", Constants.fieldRelative);
-      Preferences.setBoolean("pAccelInputs", Constants.acceleratedInputs);
-      Preferences.setDouble("pDriveGovernor", Constants.driveGovernor);
-      Preferences.setBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING);
+    Preferences.setBoolean("pFieldRelative", Constants.fieldRelative);
+    Preferences.setBoolean("pAccelInputs", Constants.acceleratedInputs);
+    Preferences.setDouble("pDriveGovernor", Constants.driveGovernor);
+    Preferences.setBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING);
 
-      HashMap<String, Command> eventMap = new HashMap<>();
-      eventMap.put("1stBallPickup", new WaitCommand(2));
-      eventMap.put("2ndBallPickup", new WaitCommand(2));
-      eventMap.put("3rdBallPickup", new WaitCommand(2));
+    HashMap<String, Command> eventMap = new HashMap<>();
+    eventMap.put("1stBallPickup", new WaitCommand(2));
+    eventMap.put("2ndBallPickup", new WaitCommand(2));
+    eventMap.put("3rdBallPickup", new WaitCommand(2));
 
-      s_SwerveDrive.setDefaultCommand( 
-        s_SwerveDrive.joystickDriveCommand(
-            () -> -xBox.getRawAxis(xBoxXAxis),
-            () -> -xBox.getRawAxis(xBoxYAxis),
-            () -> -xBox.getRawAxis(xBoxRot),
-            () -> Preferences.getDouble("pDriveGovernor", Constants.driveGovernor),
-            () -> Preferences.getBoolean("pFieldRelative", Constants.fieldRelative),
-            () -> Preferences.getBoolean("pAccelInputs", Constants.acceleratedInputs)
-            )
-      );
-      autoBuilder = new SwerveAutoBuilder(
-        s_SwerveDrive::getOdometryPose, // Pose2d supplier
-        s_SwerveDrive::resetOdometry, // Pose2d consumer, used to reset odometry at the beginning of auto
-        s_SwerveDrive.getKinematics(), // SwerveDriveKinematics
-        new PIDConstants(5, 0.0, 0.0), // PID constants to correct for translation error (used to create the X and Y PID controllers)
-        new PIDConstants(0.5, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
-        s_SwerveDrive::setAutoModuleStates, // Module states consumer used to output to the drive subsystem
-        eventMap,
-        s_SwerveDrive // The drive subsystem. Used to properly set the requirements of path following commands
-      );
+    s_SwerveDrive.setDefaultCommand( 
+      s_SwerveDrive.joystickDriveCommand(
+          () -> -xBox.getRawAxis(xBoxXAxis),
+          () -> -xBox.getRawAxis(xBoxYAxis),
+          () -> -xBox.getRawAxis(xBoxRot),
+          () -> Preferences.getDouble("pDriveGovernor", Constants.driveGovernor),
+          () -> Preferences.getBoolean("pFieldRelative", Constants.fieldRelative),
+          () -> Preferences.getBoolean("pAccelInputs", Constants.acceleratedInputs)
+          )
+    );
+    autoBuilder = new SwerveAutoBuilder(
+      s_SwerveDrive::getOdometryPose, // Pose2d supplier
+      s_SwerveDrive::resetOdometry, // Pose2d consumer, used to reset odometry at the beginning of auto
+      s_SwerveDrive.getKinematics(), // SwerveDriveKinematics
+      new PIDConstants(5, 0.0, 0.0), // PID constants to correct for translation error (used to create the X and Y PID controllers)
+      new PIDConstants(0.5, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
+      s_SwerveDrive::setAutoModuleStates, // Module states consumer used to output to the drive subsystem
+      eventMap,
+      s_SwerveDrive // The drive subsystem. Used to properly set the requirements of path following commands
+    );
 
-        // This will load the file "FullAuto.path" and generate it with a max velocity of 4 m/s and a max acceleration of 3 m/s^2
-      // for every path in the group
-      pathGroup = PathPlanner.loadPathGroup("Test5Ball", new PathConstraints(4, 3));
+    // This will load the file "FullAuto.path" and generate it with a max velocity of 4 m/s and a max acceleration of 3 m/s^2
+    // for every path in the group
+    pathGroup = PathPlanner.loadPathGroup("Test5Ball", new PathConstraints(4, 3));
 
-
-      // Configure the button bindings
+    // Configure the button bindings
     configureButtonBindings();
     Logger.configureLoggingAndConfig(this, false);
   }
@@ -105,7 +111,11 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj.Joystick} or {@link XboxController}), and then passing it to a {@link
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
-  private void configureButtonBindings() {}
+  private void configureButtonBindings() {
+    new Trigger(()->isIntegratedSteering)
+      .onFalse(s_SwerveDrive.switchToRemoteSteerCommand().ignoringDisable(true))
+      .onTrue(s_SwerveDrive.switchToIntegratedSteerCommand().ignoringDisable(true));
+  }
 
   public void setDriveTrainToBrake(){
     s_SwerveDrive.setToBrake();
@@ -123,6 +133,11 @@ public class RobotContainer {
     // An ExampleCommand will run in autonomous
     return 
       autoBuilder.fullAuto(pathGroup);    
+  }
+
+  @Config
+  public void isIntegratedSteering(boolean input){
+    isIntegratedSteering = input;
   }
 
 }

@@ -89,6 +89,14 @@ public class QuadFalconSwerveDrive {
       BackRightSwerveModule.switchToIntegratedSteer();    
     }
 
+    public String getSteerMethodStrings(){
+      return 
+        FrontLeftSwerveModule.steerMode +
+        BackLeftSwerveModule.steerMode + 
+        FrontRightSwerveModule.steerMode +
+        BackRightSwerveModule.steerMode;
+    }
+
     public void activateDefensiveStop() {
       FrontLeftSwerveModule.setSteeringAngle(45);
       FrontLeftSwerveModule.driveMotor.set(ControlMode.PercentOutput, 0);

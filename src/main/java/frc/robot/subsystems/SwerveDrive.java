@@ -233,14 +233,18 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     return _input*SwerveConstants.MAX_SPEED_RADIANSperSECOND;
   }
 
-
-  public CommandBase switchToRemoteSteerCommand(){
+  
+  public Command switchToRemoteSteerCommand(){
     return new InstantCommand(() -> m_driveTrain.switchToRemoteSteering(),this);
   }
 
-
-  public CommandBase switchToIntegratedSteerCommand(){
+  public Command switchToIntegratedSteerCommand(){
     return new InstantCommand(() -> m_driveTrain.switchToIntegratedSteer(),this);
+  }
+  
+  @Log
+  public String getSteerModes(){
+    return m_driveTrain.getSteerMethodStrings();
   }
 
 }

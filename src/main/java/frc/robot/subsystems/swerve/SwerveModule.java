@@ -221,7 +221,7 @@ public class SwerveModule {
     public void seedCANCoderAngleToMotorAngle() {
 
         // FIRST
-        if(!hasSwerveSeedingOccurred && swerveSeedingRetryCount <=50) {
+        if(!hasSwerveSeedingOccurred && swerveSeedingRetryCount <=50 && !steerMode.equals("REMOTE")) {
             if(!hasCANCoderBeenSetToAbs && steeringSensor.getAbsolutePosition() != steeringSensor.getPosition()){
                 if(steeringSensor.setPositionToAbsolute(1000)==ErrorCode.OK) {
                     hasCANCoderBeenSetToAbs = true;
@@ -240,7 +240,7 @@ public class SwerveModule {
                 swerveSeedingRetryCount++;
             }
 
-        }  else if (swerveSeedingRetryCount >50 && !steerMode.equals("REMOTE")) {
+        }  else if (!hasSwerveSeedingOccurred && swerveSeedingRetryCount <=50 && !steerMode.equals("REMOTE")) {
             System.out.println("ERROR: COULDNT SET POSITION TO ABSOLUTE! CANCODER: " + steeringSensor.getDeviceID());
             switchToCANCoderSteer();
         }
@@ -260,6 +260,7 @@ public class SwerveModule {
     public void switchToIntegratedSteer(){
         steeringMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor,0,SwerveConstants.kDefaultTimeout); 
         hasSwerveSeedingOccurred = false;  
+        hasCANCoderBeenSetToAbs = false;
         swerveSeedingRetryCount = 0;  
 
         steerMode = "INTEGRATED";

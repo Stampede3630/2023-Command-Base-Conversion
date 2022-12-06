@@ -75,13 +75,25 @@
       }
     },
     "transitory": {
+      "AdvantageKit": {
+        "open": true
+      },
+      "FMSInfo": {
+        "open": true
+      },
       "LiveWindow": {
+        ".status": {
+          "open": true
+        },
         "open": true
       },
       "Preferences": {
         "open": true
       },
       "Shuffleboard": {
+        ".metadata": {
+          "open": true
+        },
         "RobotContainer": {
           "open": true
         },

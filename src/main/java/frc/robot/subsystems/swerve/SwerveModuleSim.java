@@ -91,9 +91,9 @@ public class SwerveModuleSim {
         steerMotorSim.setIntegratedSensorVelocity((int)steerMotorVelocityNative);
         steerMotorSim.addIntegratedSensorPosition((int)(steerMotorPositionDeltaNative));
         //System.out.println(steerMotorPositionDeltaNative);
-        //steerMotorSim.setSupplyCurrent(steeringSim.getCurrentDrawAmps()/2);
-        //steerSensorCANCoderSim.setVelocity((int)steerMotorVelocityNative);
-        //steerSensorCANCoderSim.addPosition((int)(steerMotorPositionDeltaNative));
+        steerMotorSim.setSupplyCurrent(steeringSim.getCurrentDrawAmps()/2);
+        steerSensorCANCoderSim.setVelocity((int)steerMotorVelocityNative);
+        steerSensorCANCoderSim.addPosition((int)(steerMotorPositionDeltaNative));
         //steerSensorCANCoderSim.setVelocity((int)(rotationsToVelocity(steeringSim.getAngularVelocityRPM()/60, 1)*2));
         //steerSensorCANCoderSim.setRawPosition((int)(getIntegratedHeading().getDegrees()/360.0*4096));
 
