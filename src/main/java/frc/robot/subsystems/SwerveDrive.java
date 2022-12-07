@@ -27,6 +27,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.PIDCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.swerve.QuadFalconSwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
@@ -213,15 +215,15 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
       m_odometry.getEstimatedPosition().transformBy(new Transform2d(m_driveTrain.BackRightSwerveModule.moduleXYTranslation, m_driveTrain.BackRightSwerveModule.getPosition().angle)));
   }
 
-  public void setToBrake(){
-    m_driveTrain.setToBrake();
+  public Command setToBrake(){
+    return new InstantCommand(()->m_driveTrain.setToBrake(), null);
   }
 
   /**
    * METHOD WILL NOT WORK UNLESS ADDED TO PERIODIC
    */
-  public void setToCoast(){
-    m_driveTrain.setToCoast();
+  public Command setToCoast(){
+    return new RunCommand(()->m_driveTrain.setToCoast(), null);
   }
 
 
@@ -235,16 +237,11 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   
   public Command switchToRemoteSteerCommand(){
-    return new InstantCommand(() -> m_driveTrain.switchToRemoteSteering(),this);
+    return new InstantCommand(() -> m_driveTrain.switchToRemoteSteering(),null);
   }
 
   public Command switchToIntegratedSteerCommand(){
-    return new InstantCommand(() -> m_driveTrain.switchToIntegratedSteer(),this);
-  }
-  
-  @Log
-  public String getSteerModes(){
-    return m_driveTrain.getSteerMethodStrings();
+    return new InstantCommand(() -> m_driveTrain.switchToIntegratedSteer(),null);
   }
 
 }
