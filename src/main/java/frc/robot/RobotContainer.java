@@ -13,12 +13,13 @@ import com.pathplanner.lib.auto.PIDConstants;
 import com.pathplanner.lib.auto.SwerveAutoBuilder;
 import com.pathplanner.lib.PathConstraints;
 
-
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
-
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -43,6 +44,7 @@ public class RobotContainer {
   private final int xBoxYAxis = XboxController.Axis.kLeftX.value;
   private final int xBoxRot = XboxController.Axis.kRightX.value;
   private boolean isIntegratedSteering = true;
+  PIDController rotationController = new PIDController(.5, 0, 0);
   SwerveAutoBuilder autoBuilder;
   ArrayList<PathPlannerTrajectory> pathGroup;
 
@@ -73,11 +75,11 @@ public class RobotContainer {
       s_SwerveDrive.joystickDriveCommand(
           () -> -xBox.getRawAxis(xBoxXAxis),
           () -> -xBox.getRawAxis(xBoxYAxis),
-          () -> -xBox.getRawAxis(xBoxRot),
+          () -> rotationController(),
           () -> Preferences.getDouble("pDriveGovernor", Constants.driveGovernor),
           () -> Preferences.getBoolean("pFieldRelative", Constants.fieldRelative),
           () -> Preferences.getBoolean("pAccelInputs", Constants.acceleratedInputs)
-          )
+        )
     );
     autoBuilder = new SwerveAutoBuilder(
       s_SwerveDrive::getOdometryPose, // Pose2d supplier
@@ -109,18 +111,19 @@ public class RobotContainer {
     new Trigger(()->isIntegratedSteering)
       .onFalse(s_SwerveDrive.switchToRemoteSteerCommand().ignoringDisable(true))
       .onTrue(s_SwerveDrive.switchToIntegratedSteerCommand().ignoringDisable(true));
+    
+    /**
+     * Trigger Coast/Brake modes when DS is Disabled/Enabled.
+     * Trigger runs WHILETRUE for coast mode.  Coast Mode method
+     * is written to wait for slow speeds before setting to coast
+     */
+    new Trigger(DriverStation::isDisabled)
+      .whileTrue(s_SwerveDrive.setToCoast().ignoringDisable(true))
+      .onFalse(s_SwerveDrive.setToBrake());
+
   }
 
-  public void setDriveTrainToBrake(){
-    s_SwerveDrive.setToBrake();
-  }
 
-  /**
-   * MUST BE CALLED IN DISABLEDPERIODIC to work properly
-   */
-  public void setDriveTraintoCoast(){
-    s_SwerveDrive.setToCoast();
-  }
 
   public Command getAutonomousCommand() {
 
@@ -129,9 +132,20 @@ public class RobotContainer {
       autoBuilder.fullAuto(pathGroup);    
   }
 
+
   @Config
   public void isIntegratedSteering(boolean input){
     isIntegratedSteering = input;
   }
+
+  public double rotationController(){
+    if(Math.abs(-xBox.getRawAxis(xBoxRot)) > 0 && xBox.getPOV() > -1){
+      return rotationController.calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360), xBox.getPOV()-180);
+    } else {
+      return -xBox.getRawAxis(xBoxRot);
+    }
+
+  }
+
 
 }

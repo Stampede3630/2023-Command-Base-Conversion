@@ -56,14 +56,11 @@ public class Robot extends TimedRobot {
 
   @Override
   public void disabledPeriodic() {
-    m_robotContainer.setDriveTraintoCoast();
   }
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    
-    m_robotContainer.setDriveTrainToBrake();
     m_robotContainer.getAutonomousCommand().schedule();
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {
@@ -77,7 +74,6 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
-    m_robotContainer.setDriveTrainToBrake();
     // This makes sure that the autonomous stops running when
     // teleop starts running. If you want the autonomous to
     // continue until interrupted by another command, remove
@@ -93,7 +89,6 @@ public class Robot extends TimedRobot {
 
   @Override
   public void testInit() {
-    m_robotContainer.setDriveTrainToBrake();
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
   }
