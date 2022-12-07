@@ -26,7 +26,15 @@
   {
     "name": "/Preferences/pOptimizeSteering",
     "type": "boolean",
-    "value": false,
+    "value": true,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/pKPRotationController",
+    "type": "double",
+    "value": 0.01,
     "properties": {
       "persistent": true
     }

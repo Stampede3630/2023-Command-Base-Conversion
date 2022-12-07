@@ -22,6 +22,7 @@ public final class SwerveConstants {
     public static final boolean DEFAULT_HOLD_ROBOT_ANGLE = false;
 	public static final boolean DEFAULT_FIELD_RELATIVE_DRIVE = true;
 	public static final double DEFAULT_HOLD_ROBOT_ANGLE_SETPOINT = 0; 
+    public static double kpRotationController = .1;
 
     //Swerve Drive Motor IDs
     public static final int FRDriveID = 2;
@@ -71,6 +72,7 @@ public final class SwerveConstants {
     public static Gains FLDriveGains = new Gains(0.07, 0, 0, 1023.0/20660.0);
     public static Gains BRDriveGains = new Gains(0.07, 0, 0, 1023.0/20660.0);
     public static Gains BLDriveGains = new Gains(0.07, 0, 0, 1023.0/20660.0);
+
     public static final double kS = 0.4148;
     public static final double kV = 2.55;
     public static final double kA = 3.4537;

@@ -216,14 +216,14 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   }
 
   public Command setToBrake(){
-    return new InstantCommand(()->m_driveTrain.setToBrake(), null);
+    return new InstantCommand(()->m_driveTrain.setToBrake(), this);
   }
 
   /**
    * METHOD WILL NOT WORK UNLESS ADDED TO PERIODIC
    */
   public Command setToCoast(){
-    return new RunCommand(()->m_driveTrain.setToCoast(), null);
+    return new RunCommand(()->m_driveTrain.setToCoast(), this);
   }
 
 
@@ -237,11 +237,11 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   
   public Command switchToRemoteSteerCommand(){
-    return new InstantCommand(() -> m_driveTrain.switchToRemoteSteering(),null);
+    return new InstantCommand(() -> m_driveTrain.switchToRemoteSteering(),this);
   }
 
   public Command switchToIntegratedSteerCommand(){
-    return new InstantCommand(() -> m_driveTrain.switchToIntegratedSteer(),null);
+    return new InstantCommand(() -> m_driveTrain.switchToIntegratedSteer(),this);
   }
 
 }

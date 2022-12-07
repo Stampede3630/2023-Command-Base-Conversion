@@ -44,7 +44,8 @@ public class RobotContainer {
   private final int xBoxYAxis = XboxController.Axis.kLeftX.value;
   private final int xBoxRot = XboxController.Axis.kRightX.value;
   private boolean isIntegratedSteering = true;
-  PIDController rotationController = new PIDController(.5, 0, 0);
+  PIDController rotationController; 
+  
   SwerveAutoBuilder autoBuilder;
   ArrayList<PathPlannerTrajectory> pathGroup;
 
@@ -65,6 +66,13 @@ public class RobotContainer {
     Preferences.setBoolean("pAccelInputs", Constants.acceleratedInputs);
     Preferences.setDouble("pDriveGovernor", Constants.driveGovernor);
     Preferences.setBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING);
+    Preferences.setDouble("pKPRotationController", SwerveConstants.kpRotationController);
+
+    rotationController = new PIDController(Preferences.getDouble("pKPRotationController", SwerveConstants.kpRotationController),0,0);
+
+    rotationController.enableContinuousInput(-180.0, 180.0);
+    rotationController.setTolerance(2.0);
+
 
     HashMap<String, Command> eventMap = new HashMap<>();
     eventMap.put("1stBallPickup", new WaitCommand(2));
@@ -75,7 +83,7 @@ public class RobotContainer {
       s_SwerveDrive.joystickDriveCommand(
           () -> -xBox.getRawAxis(xBoxXAxis),
           () -> -xBox.getRawAxis(xBoxYAxis),
-          () -> rotationController(),
+          () -> rotationInputController(),
           () -> Preferences.getDouble("pDriveGovernor", Constants.driveGovernor),
           () -> Preferences.getBoolean("pFieldRelative", Constants.fieldRelative),
           () -> Preferences.getBoolean("pAccelInputs", Constants.acceleratedInputs)
@@ -138,13 +146,14 @@ public class RobotContainer {
     isIntegratedSteering = input;
   }
 
-  public double rotationController(){
-    if(Math.abs(-xBox.getRawAxis(xBoxRot)) > 0 && xBox.getPOV() > -1){
+  public double rotationInputController(){
+    if(Math.abs(-xBox.getRawAxis(xBoxRot)) < .2 && (xBox.getPOV() > -1)){
+      rotationController.setP(Preferences.getDouble("pKPRotationController", SwerveConstants.kpRotationController));
+      
       return rotationController.calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360), xBox.getPOV()-180);
     } else {
       return -xBox.getRawAxis(xBoxRot);
     }
-
   }
 
 
