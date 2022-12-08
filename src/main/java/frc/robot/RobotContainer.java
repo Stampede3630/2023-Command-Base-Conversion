@@ -14,12 +14,16 @@ import com.pathplanner.lib.auto.SwerveAutoBuilder;
 import com.pathplanner.lib.PathConstraints;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -27,6 +31,7 @@ import frc.robot.subsystems.SwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import io.github.oblarg.oblog.Logger;
 import io.github.oblarg.oblog.annotations.Config;
+import io.github.oblarg.oblog.annotations.Log;
 
 
 
@@ -40,11 +45,15 @@ public class RobotContainer {
   
   /*Controller setup.  For simulations google: x360CE */
   private final XboxController xBox = new XboxController(0);
+  
   private final int xBoxXAxis = XboxController.Axis.kLeftY.value;
   private final int xBoxYAxis = XboxController.Axis.kLeftX.value;
   private final int xBoxRot = XboxController.Axis.kRightX.value;
   private boolean isIntegratedSteering = true;
-  PIDController rotationController; 
+  ProfiledPIDController rotationController; 
+  private boolean holdAngleEnabled = false;
+  @Log
+  private double holdAngleDegrees= 0.0;
   
   SwerveAutoBuilder autoBuilder;
   ArrayList<PathPlannerTrajectory> pathGroup;
@@ -62,17 +71,24 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    Preferences.setBoolean("pFieldRelative", Constants.fieldRelative);
-    Preferences.setBoolean("pAccelInputs", Constants.acceleratedInputs);
-    Preferences.setDouble("pDriveGovernor", Constants.driveGovernor);
-    Preferences.setBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING);
-    Preferences.setDouble("pKPRotationController", SwerveConstants.kpRotationController);
+    /**
+     * Preferences are cool.  they store the values in the roborio flash memory so they don't necessarily get reset to default.  
+     */
+    Preferences.initBoolean("pFieldRelative", Constants.fieldRelative);
+    Preferences.initBoolean("pAccelInputs", Constants.acceleratedInputs);
+    Preferences.initDouble("pDriveGovernor", Constants.driveGovernor);
+    Preferences.initBoolean("pOptimizeSteering", SwerveConstants.OPTIMIZESTEERING);
+    Preferences.initDouble("pKPRotationController", SwerveConstants.kPRotationController);
+    Preferences.initDouble("pKIRotationController", SwerveConstants.kDRotationController);
+    Preferences.initDouble("pKDRotationController", SwerveConstants.kIRotationController);
 
-    rotationController = new PIDController(Preferences.getDouble("pKPRotationController", SwerveConstants.kpRotationController),0,0);
-
+    rotationController = new ProfiledPIDController(
+      Preferences.getDouble("pKPRotationController", SwerveConstants.kPRotationController),
+      Preferences.getDouble("pIPRotationController", SwerveConstants.kIRotationController),
+      Preferences.getDouble("pKDRotationController", SwerveConstants.kDRotationController),
+      new TrapezoidProfile.Constraints(1, 1));
     rotationController.enableContinuousInput(-180.0, 180.0);
     rotationController.setTolerance(2.0);
-
 
     HashMap<String, Command> eventMap = new HashMap<>();
     eventMap.put("1stBallPickup", new WaitCommand(2));
@@ -129,6 +145,18 @@ public class RobotContainer {
       .whileTrue(s_SwerveDrive.setToCoast().ignoringDisable(true))
       .onFalse(s_SwerveDrive.setToBrake());
 
+    /**
+     * next two triggers are to "toggle" rotation HOLD mode 
+     * */  
+    new Trigger(()->xBox.getPOV() > -1)
+      .onTrue(new InstantCommand(()->
+        {
+          holdAngleEnabled = true;
+          holdAngleDegrees = -xBox.getPOV()+180;
+          rotationController.reset(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360));
+        }));
+    new Trigger(()->xBox.getBButtonPressed())
+        .onTrue(new InstantCommand(()->{holdAngleEnabled = false;}));
   }
 
 
@@ -147,10 +175,12 @@ public class RobotContainer {
   }
 
   public double rotationInputController(){
-    if(Math.abs(-xBox.getRawAxis(xBoxRot)) < .2 && (xBox.getPOV() > -1)){
-      rotationController.setP(Preferences.getDouble("pKPRotationController", SwerveConstants.kpRotationController));
+    if(holdAngleEnabled && Math.abs(-xBox.getRawAxis(xBoxRot)) <.1){
+      rotationController.setP(Preferences.getDouble("pKPRotationController", SwerveConstants.kPRotationController));
+      rotationController.setI(Preferences.getDouble("pKIRotationController", SwerveConstants.kIRotationController));
+      rotationController.setD(Preferences.getDouble("pKDRotationController", SwerveConstants.kDRotationController));
       
-      return rotationController.calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360), xBox.getPOV()-180);
+      return rotationController.calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360),new State(holdAngleDegrees,0.0 ));
     } else {
       return -xBox.getRawAxis(xBoxRot);
     }

@@ -34,7 +34,39 @@
   {
     "name": "/Preferences/pKPRotationController",
     "type": "double",
-    "value": 0.1,
+    "value": 0.09,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/pDPRotationController",
+    "type": "double",
+    "value": 0.05,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/pIPRotationController",
+    "type": "double",
+    "value": 0.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/pKIRotationController",
+    "type": "double",
+    "value": 0.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/pKDRotationController",
+    "type": "double",
+    "value": 0.009,
     "properties": {
       "persistent": true
     }
