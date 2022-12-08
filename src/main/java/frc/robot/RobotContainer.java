@@ -17,6 +17,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Preferences;
@@ -51,9 +52,11 @@ public class RobotContainer {
   private final int xBoxRot = XboxController.Axis.kRightX.value;
   private boolean isIntegratedSteering = true;
   ProfiledPIDController rotationController; 
+  @Log
   private boolean holdAngleEnabled = false;
   @Log
   private double holdAngleDegrees= 0.0;
+  @Log private double rotationOutput = 0.0;
   
   SwerveAutoBuilder autoBuilder;
   ArrayList<PathPlannerTrajectory> pathGroup;
@@ -86,9 +89,9 @@ public class RobotContainer {
       Preferences.getDouble("pKPRotationController", SwerveConstants.kPRotationController),
       Preferences.getDouble("pIPRotationController", SwerveConstants.kIRotationController),
       Preferences.getDouble("pKDRotationController", SwerveConstants.kDRotationController),
-      new TrapezoidProfile.Constraints(1, 1));
+      new TrapezoidProfile.Constraints(Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND), 5*Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND)));
     rotationController.enableContinuousInput(-180.0, 180.0);
-    rotationController.setTolerance(2.0);
+    rotationController.setTolerance(4.0);
 
     HashMap<String, Command> eventMap = new HashMap<>();
     eventMap.put("1stBallPickup", new WaitCommand(2));
@@ -152,9 +155,16 @@ public class RobotContainer {
       .onTrue(new InstantCommand(()->
         {
           holdAngleEnabled = true;
-          holdAngleDegrees = -xBox.getPOV()+180;
-          rotationController.reset(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360));
+          holdAngleDegrees = -xBox.getPOV() + 90;
+          rotationController.reset(Math.IEEEremainder(
+            s_SwerveDrive.getRobotAngleDegrees(), 360), 
+            Units.radiansToDegrees(rotationOutput*SwerveConstants.MAX_SPEED_RADIANSperSECOND));
         }));
+    new Trigger(()-> (holdAngleEnabled && rotationController.atGoal() && !xBox.getBButtonPressed()))
+        .onTrue(new InstantCommand(()->{holdAngleEnabled = false;}));
+          //.until(()->!rotationController.atGoal()).andThen(()->holdAngleEnabled = true));
+
+
     new Trigger(()->xBox.getBButtonPressed())
         .onTrue(new InstantCommand(()->{holdAngleEnabled = false;}));
   }
@@ -180,10 +190,13 @@ public class RobotContainer {
       rotationController.setI(Preferences.getDouble("pKIRotationController", SwerveConstants.kIRotationController));
       rotationController.setD(Preferences.getDouble("pKDRotationController", SwerveConstants.kDRotationController));
       
-      return rotationController.calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360),new State(holdAngleDegrees,0.0 ));
+      rotationOutput = rotationController.calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360),new State(holdAngleDegrees,Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND*rotationOutput)))/Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND);
     } else {
-      return -xBox.getRawAxis(xBoxRot);
+      rotationOutput = -xBox.getRawAxis(xBoxRot);
     }
+
+    return rotationOutput;
+
   }
 
 
