@@ -10,6 +10,7 @@ import java.util.function.DoubleSupplier;
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -19,17 +20,15 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N5;
 import edu.wpi.first.math.numbers.N7;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandBase;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.PIDCommand;
-import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.*;
+import frc.robot.Constants;
 import frc.robot.subsystems.swerve.QuadFalconSwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import frc.robot.subsystems.swerve.SwerveModule;
@@ -38,6 +37,8 @@ import frc.robot.util.SwerveDrivePoseEstimator;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.math.util.Units;
+
 
 public class SwerveDrive extends SubsystemBase implements Loggable {
   QuadFalconSwerveDrive m_driveTrain;
@@ -48,11 +49,24 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   AHRS gyro;
   SimGyroSensorModel simNavx; 
   SwerveDrivePoseEstimator m_odometry; 
+  @Log
+  double holdHeadingAngle = 0;
+  @Log
+  boolean holdHeadingEnabled = false;
+  ProfiledPIDController rotationController;
+  double rotationControllerOutput;
 
   @Log
   public Field2d m_field;
 
   public SwerveDrive() {
+    rotationController = new ProfiledPIDController(
+      Preferences.getDouble("pKPRotationController", SwerveConstants.kPRotationController),
+      Preferences.getDouble("pIPRotationController", SwerveConstants.kIRotationController),
+      Preferences.getDouble("pKDRotationController", SwerveConstants.kDRotationController),
+      new TrapezoidProfile.Constraints(Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND), 5*Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND)));
+    rotationController.enableContinuousInput(-180.0, 180.0);
+    rotationController.setTolerance(4.0);
     //NAVX gyro and sim setup
     gyro = new AHRS(SPI.Port.kMXP);
     gyro.reset(); 
@@ -97,6 +111,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
     m_driveTrain.checkAndSetSwerveCANStatus();
     drawRobotOnField(m_field);
+    updateRotationController();
   }
 
 
@@ -108,15 +123,15 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
    * @param fieldRelative
    * @param acceleratedInputs
    */
-  public CommandBase joystickDriveCommand(DoubleSupplier _x, DoubleSupplier _y, DoubleSupplier _rot, DoubleSupplier driveGovernor, BooleanSupplier fieldRelative, BooleanSupplier acceleratedInputs){
+  public CommandBase joystickDriveCommand(DoubleSupplier _x, DoubleSupplier _y, DoubleSupplier _rot){
     return Commands.run(
       () -> {
-        double x = _x.getAsDouble();
-        double y = _y.getAsDouble();
-        double rot = _rot.getAsDouble();;
-        double joystickDriveGovernor = driveGovernor.getAsDouble();
+        double x = -_x.getAsDouble();
+        double y = -_y.getAsDouble();
+        double rot = -_rot.getAsDouble();;
+        double joystickDriveGovernor = Preferences.getDouble("pDriveGovernor", Constants.driveGovernor);
         
-        if (acceleratedInputs.getAsBoolean()) {
+        if (Preferences.getBoolean("pAccelInputs", Constants.acceleratedInputs)) {
 
         } else {
           x = Math.signum(x) * Math.sqrt(Math.abs(x));
@@ -128,10 +143,30 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
             convertToMetersPerSecond(x)*joystickDriveGovernor,
             convertToMetersPerSecond(y)*joystickDriveGovernor), 
           convertToRadiansPerSecond(rot)* joystickDriveGovernor, 
-          fieldRelative.getAsBoolean());
+          Preferences.getBoolean("pFieldRelative", Constants.fieldRelative));
         }, this);
   }
 
+  public Command holdHeadingCommand(DoubleSupplier xSpeed, DoubleSupplier ySpeed) {
+    return joystickDriveCommand(
+                xSpeed,
+                ySpeed,
+                ()->rotationControllerOutput
+            );
+  }
+
+  public void updateRotationController(){
+    if(holdHeadingEnabled){
+      rotationControllerOutput = rotationController.calculate(
+                  Math.IEEEremainder(getRobotAngleDegrees(), 360),
+                  new State(holdHeadingAngle, 0.0))/-Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND);
+    }
+  }
+
+  @Log
+  public boolean getAtGoal(){
+    return rotationController.atGoal();
+  }
  
   /**
    * @return a Rotation2d populated by the gyro readings 
@@ -171,6 +206,8 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     m_driveTrain.setModuleSpeeds(swerveModuleStates);
   }
 
+
+
   /** 
    * Update the SwerveDrivePoseEstimator
   */
@@ -181,6 +218,18 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
 
   public Pose2d getOdometryPose(){
     return m_odometry.getEstimatedPosition();
+  }
+
+  public void setHoldHeadingFlag(Boolean input){
+    holdHeadingEnabled = input;
+  }
+  @Log
+  public boolean getHoldHeadingFlag(){
+    return holdHeadingEnabled;
+  }
+
+  public void setHoldHeadingAngle(double input) {
+    holdHeadingAngle = input;
   }
 
   public void resetOdometry(Pose2d newPose){
@@ -223,7 +272,6 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   public Command setToCoast(){
     return new RunCommand(()->m_driveTrain.setToCoast(), this);
   }
-
 
   private double convertToMetersPerSecond(double _input){
     return _input*SwerveConstants.MAX_SPEED_METERSperSECOND;
