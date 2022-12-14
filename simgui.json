@@ -21,6 +21,7 @@
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
+      "/Shuffleboard/RobotContainer/s_SwerveDrive": "Subsystem",
       "/Shuffleboard/SwerveDrive/field": "Field2d",
       "/Shuffleboard/SwerveDrive/m_field": "Field2d",
       "/Shuffleboard/SwerveDrive/switchToIntegratedSteerCommand": "Command",
@@ -28,6 +29,11 @@
       "/SmartDashboard/PPSwerveControllerCommand_field": "Field2d"
     },
     "windows": {
+      "/Shuffleboard/RobotContainer/s_SwerveDrive": {
+        "window": {
+          "visible": true
+        }
+      },
       "/Shuffleboard/SwerveDrive/m_field": {
         "Robot": {
           "arrowSize": 75,
@@ -148,7 +154,10 @@
             }
           ]
         }
-      ]
+      ],
+      "window": {
+        "visible": false
+      }
     }
   }
 }

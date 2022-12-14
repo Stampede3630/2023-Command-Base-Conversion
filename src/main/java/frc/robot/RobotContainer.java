@@ -65,7 +65,9 @@ public class RobotContainer {
 
 
 // This is just an example event map. It would be better to have a constant, global event map
-  private final SwerveDrive s_SwerveDrive = new SwerveDrive();
+  
+@Log
+private final SwerveDrive s_SwerveDrive = new SwerveDrive();
   // The robot's subsystems and commands are defined here...
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -86,12 +88,6 @@ public class RobotContainer {
     eventMap.put("2ndBallPickup", new WaitCommand(2));
     eventMap.put("3rdBallPickup", new WaitCommand(2));
 
-    s_SwerveDrive.setDefaultCommand( 
-        s_SwerveDrive.joystickDriveCommand(
-          xBox::getLeftY,
-          xBox::getLeftX,
-          xBox::getRightX));
-
     autoBuilder = new SwerveAutoBuilder(
       s_SwerveDrive::getOdometryPose, // Pose2d supplier
       s_SwerveDrive::resetOdometry, // Pose2d consumer, used to reset odometry at the beginning of auto
@@ -102,6 +98,12 @@ public class RobotContainer {
       eventMap,
       s_SwerveDrive // The drive subsystem. Used to properly set the requirements of path following commands
     );
+    s_SwerveDrive.setDefaultCommand( 
+        s_SwerveDrive.joystickDriveCommand(
+          xBox::getLeftY,
+          xBox::getLeftX,
+          xBox::getRightX).withName("DefaultDrive"));
+
 
     // This will load the file "FullAuto.path" and generate it with a max velocity of 4 m/s and a max acceleration of 3 m/s^2
     // for every path in the group
@@ -137,19 +139,18 @@ public class RobotContainer {
      * next two triggers are to "toggle" rotation HOLD mode and set a heading
      * */  
 
-
-    new Trigger(()->Math.abs(xBox.getRightX()) < .1)
+      new Trigger(()->Math.abs(xBox.getRightX()) < .1)
       .and(s_SwerveDrive::getHoldHeadingFlag)
       .and(new Trigger(s_SwerveDrive::getAtGoal).negate())
         .whileTrue(
           s_SwerveDrive.holdHeadingCommand(
             xBox::getLeftY,
-            xBox::getLeftX))
+            xBox::getLeftX).withName("holdHeading"))
         .whileFalse(
           s_SwerveDrive.joystickDriveCommand(
             xBox::getLeftY,
             xBox::getLeftX,
-            xBox::getRightX));
+            xBox::getRightX).withName("StandardOperatorDrive"));
 
     /**
      * Disable rotation mode
@@ -167,7 +168,7 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     // An ExampleCommand will run in autonomous
     return 
-      autoBuilder.fullAuto(pathGroup);    
+      autoBuilder.fullAuto(pathGroup).withName("autoTest");    
   }
 
   @Config
