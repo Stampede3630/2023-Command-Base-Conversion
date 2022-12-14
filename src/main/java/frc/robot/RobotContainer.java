@@ -153,28 +153,28 @@ public class RobotContainer {
       .onFalse(s_SwerveDrive.setToBrake());
 
 
-
     /**
-     * next two triggers are to "toggle" rotation HOLD mode 
+     * next two triggers are to "toggle" rotation HOLD mode and set a heading
      * */  
     new Trigger(()->xBox.getPOV() > -1)
       .onTrue(new InstantCommand(()->
         {
           holdAngleEnabled = true;
           holdAngleDegrees = -xBox.getPOV() + 90;
-
         }));
-
+    /**
+     * Disable rotation mode
+     */
     new Trigger(()->xBox.getBButtonPressed())
         .onTrue(new InstantCommand(()->{holdAngleEnabled = false;}));
   }
 
 
 
-
-
-
-
+  /**
+   * @return either the negated joystick input dedicated to the swerve axis, 
+   * or the PID input calculated based on the robots current angle and it's holdPoint
+   */
   public double rotationInputController(){
     if(Math.abs(-xBox.getRawAxis(xBoxRot)) > .1){
       rotationOutput = -xBox.getRawAxis(xBoxRot);
