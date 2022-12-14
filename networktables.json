@@ -34,7 +34,7 @@
   {
     "name": "/Preferences/pKPRotationController",
     "type": "double",
-    "value": 7.0,
+    "value": 6.0,
     "properties": {
       "persistent": true
     }

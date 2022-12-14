@@ -22,7 +22,7 @@ public final class SwerveConstants {
     public static final boolean DEFAULT_HOLD_ROBOT_ANGLE = false;
 	public static final boolean DEFAULT_FIELD_RELATIVE_DRIVE = true;
 	public static final double DEFAULT_HOLD_ROBOT_ANGLE_SETPOINT = 0; 
-    public static final double kPRotationController = .1;
+    public static final double kPRotationController = 6.0;
     public static final double kDRotationController = 0;
     public static final double kIRotationController = 0;
 

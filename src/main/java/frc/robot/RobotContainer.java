@@ -24,6 +24,9 @@ import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.PrintCommand;
+import edu.wpi.first.wpilibj2.command.ProfiledPIDCommand;
+import edu.wpi.first.wpilibj2.command.RepeatCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
@@ -33,6 +36,7 @@ import frc.robot.subsystems.swerve.SwerveConstants;
 import io.github.oblarg.oblog.Logger;
 import io.github.oblarg.oblog.annotations.Config;
 import io.github.oblarg.oblog.annotations.Log;
+import io.github.oblarg.oblog.annotations.Config.PIDCommand;
 
 
 
@@ -148,6 +152,8 @@ public class RobotContainer {
       .whileTrue(s_SwerveDrive.setToCoast().ignoringDisable(true))
       .onFalse(s_SwerveDrive.setToBrake());
 
+
+
     /**
      * next two triggers are to "toggle" rotation HOLD mode 
      * */  
@@ -156,14 +162,8 @@ public class RobotContainer {
         {
           holdAngleEnabled = true;
           holdAngleDegrees = -xBox.getPOV() + 90;
-          rotationController.reset(Math.IEEEremainder(
-            s_SwerveDrive.getRobotAngleDegrees(), 360), 
-            Units.radiansToDegrees(rotationOutput*SwerveConstants.MAX_SPEED_RADIANSperSECOND));
-        }));
-    new Trigger(()-> (holdAngleEnabled && rotationController.atGoal() && !xBox.getBButtonPressed()))
-        .onTrue(new InstantCommand(()->{holdAngleEnabled = false;}));
-          //.until(()->!rotationController.atGoal()).andThen(()->holdAngleEnabled = true));
 
+        }));
 
     new Trigger(()->xBox.getBButtonPressed())
         .onTrue(new InstantCommand(()->{holdAngleEnabled = false;}));
@@ -171,33 +171,36 @@ public class RobotContainer {
 
 
 
-  public Command getAutonomousCommand() {
 
+
+
+
+  public double rotationInputController(){
+    if(Math.abs(-xBox.getRawAxis(xBoxRot)) > .1){
+      rotationOutput = -xBox.getRawAxis(xBoxRot);
+    } else if (holdAngleEnabled) {
+      double controllerOutput =  rotationController
+      .calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360),new State(holdAngleDegrees,0))/Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND);
+      if(!rotationController.atGoal()) {
+        rotationOutput = controllerOutput;
+      } else {
+        rotationOutput = 0;
+      }
+    } else {
+      rotationOutput = 0;
+    }
+    return rotationOutput;
+  }
+
+
+  public Command getAutonomousCommand() {
     // An ExampleCommand will run in autonomous
     return 
       autoBuilder.fullAuto(pathGroup);    
   }
 
-
   @Config
   public void isIntegratedSteering(boolean input){
     isIntegratedSteering = input;
   }
-
-  public double rotationInputController(){
-    if(holdAngleEnabled && Math.abs(-xBox.getRawAxis(xBoxRot)) <.1){
-      rotationController.setP(Preferences.getDouble("pKPRotationController", SwerveConstants.kPRotationController));
-      rotationController.setI(Preferences.getDouble("pKIRotationController", SwerveConstants.kIRotationController));
-      rotationController.setD(Preferences.getDouble("pKDRotationController", SwerveConstants.kDRotationController));
-      
-      rotationOutput = rotationController.calculate(Math.IEEEremainder(s_SwerveDrive.getRobotAngleDegrees(), 360),new State(holdAngleDegrees,Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND*rotationOutput)))/Units.radiansToDegrees(SwerveConstants.MAX_SPEED_RADIANSperSECOND);
-    } else {
-      rotationOutput = -xBox.getRawAxis(xBoxRot);
-    }
-
-    return rotationOutput;
-
-  }
-
-
 }

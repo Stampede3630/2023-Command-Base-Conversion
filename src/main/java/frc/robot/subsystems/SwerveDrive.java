@@ -89,16 +89,13 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     }
     deltaTime = Timer.getFPGATimestamp() - prevTime;
     prevTime = Timer.getFPGATimestamp();
-    //System.out.println(deltaTime);
 
-    
-   
     if(RobotBase.isSimulation()) {
       simNavx.update(robotPose, prevRobotPose, deltaTime);
     }
     robotPose = updateOdometry();
-    //commented this line out due to 
-    // m_driveTrain.checkAndSetSwerveCANStatus();
+
+    m_driveTrain.checkAndSetSwerveCANStatus();
     drawRobotOnField(m_field);
   }
 
@@ -193,6 +190,7 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   public SwerveDriveKinematics getKinematics() {
     return m_driveTrain.m_kinematics;
   }
+  
   public void setAutoModuleStates (SwerveModuleState[] states){
     m_driveTrain.setModuleSpeeds(states);
   }
