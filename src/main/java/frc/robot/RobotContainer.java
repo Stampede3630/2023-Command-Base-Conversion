@@ -98,7 +98,7 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
       eventMap,
       s_SwerveDrive // The drive subsystem. Used to properly set the requirements of path following commands
     );
-    s_SwerveDrive.setDefaultCommand( 
+    s_SwerveDrive.setDefaultCommand(
         s_SwerveDrive.joystickDriveCommand(
           xBox::getLeftY,
           xBox::getLeftX,
@@ -139,22 +139,23 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
      * next two triggers are to "toggle" rotation HOLD mode and set a heading
      * */  
 
-      new Trigger(()->Math.abs(xBox.getRightX()) < .1)
+    new Trigger(()->Math.abs(xBox.getRightX()) < .1)
       .and(s_SwerveDrive::getHoldHeadingFlag)
       .and(new Trigger(s_SwerveDrive::getAtGoal).negate())
         .whileTrue(
           s_SwerveDrive.holdHeadingCommand(
             xBox::getLeftY,
-            xBox::getLeftX).withName("holdHeading"))
+            xBox::getLeftX)
+          .withName("holdHeading")
+          )
         .whileFalse(
           s_SwerveDrive.joystickDriveCommand(
             xBox::getLeftY,
             xBox::getLeftX,
-            xBox::getRightX).withName("StandardOperatorDrive"));
+            xBox::getRightX)
+          .withName("StandardOperatorDrive")
+        );
 
-    /**
-     * Disable rotation mode
-     */
     xBox.b()
         .onTrue(new InstantCommand(()->s_SwerveDrive.setHoldHeadingFlag(false)));
 
@@ -168,7 +169,7 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
   public Command getAutonomousCommand() {
     // An ExampleCommand will run in autonomous
     return 
-      autoBuilder.fullAuto(pathGroup).withName("autoTest");    
+      autoBuilder.fullAuto(pathGroup).withName("autoTest").withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming);   
   }
 
   @Config
