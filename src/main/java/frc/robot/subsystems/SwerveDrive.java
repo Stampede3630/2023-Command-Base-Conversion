@@ -263,14 +263,14 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
   }
 
   public Command setToBrake(){
-    return new InstantCommand(()->m_driveTrain.setToBrake(), this);
+    return new InstantCommand(()->m_driveTrain.setToBrake());
   }
 
   /**
    * METHOD WILL NOT WORK UNLESS ADDED TO PERIODIC
    */
   public Command setToCoast(){
-    return new RunCommand(()->m_driveTrain.setToCoast(), this);
+    return new RunCommand(()->m_driveTrain.setToCoast());
   }
 
   private double convertToMetersPerSecond(double _input){

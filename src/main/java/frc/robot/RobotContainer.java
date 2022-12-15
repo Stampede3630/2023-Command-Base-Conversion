@@ -167,11 +167,9 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
   }
 
   public Command getAutonomousCommand() {
-    // An ExampleCommand will run in autonomous
     return 
-      autoBuilder.fullAuto(pathGroup).withName("autoTest").withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming);   
+      autoBuilder.fullAuto(pathGroup).withName("autoTest");
   }
-
   @Config
   public void isIntegratedSteering(boolean input){
     isIntegratedSteering = input;
