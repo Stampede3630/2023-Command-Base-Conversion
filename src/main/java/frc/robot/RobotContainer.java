@@ -9,6 +9,7 @@ import java.util.HashMap;
 
 import com.pathplanner.lib.PathPlanner;
 import com.pathplanner.lib.PathPlannerTrajectory;
+import com.pathplanner.lib.PathPoint;
 import com.pathplanner.lib.auto.PIDConstants;
 import com.pathplanner.lib.auto.SwerveAutoBuilder;
 import com.pathplanner.lib.PathConstraints;
@@ -27,6 +28,7 @@ import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.ProfiledPIDCommand;
+import edu.wpi.first.wpilibj2.command.ProxyCommand;
 import edu.wpi.first.wpilibj2.command.RepeatCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
@@ -55,7 +57,7 @@ public class RobotContainer {
 
   private boolean isIntegratedSteering = true;
   SwerveAutoBuilder autoBuilder;
-  ArrayList<PathPlannerTrajectory> pathGroup;
+  ArrayList<PathPlannerTrajectory> autoPathGroup, leftPathGroup, rightPathGroup;
 
 
      
@@ -93,11 +95,13 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
       s_SwerveDrive::resetOdometry, // Pose2d consumer, used to reset odometry at the beginning of auto
       s_SwerveDrive.getKinematics(), // SwerveDriveKinematics
       new PIDConstants(5, 0.0, 0.0), // PID constants to correct for translation error (used to create the X and Y PID controllers)
-      new PIDConstants(0.5, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
+      new PIDConstants(5, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
       s_SwerveDrive::setAutoModuleStates, // Module states consumer used to output to the drive subsystem
       eventMap,
       s_SwerveDrive // The drive subsystem. Used to properly set the requirements of path following commands
     );
+
+
     s_SwerveDrive.setDefaultCommand(
         s_SwerveDrive.joystickDriveCommand(
           xBox::getLeftY,
@@ -107,8 +111,9 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
 
     // This will load the file "FullAuto.path" and generate it with a max velocity of 4 m/s and a max acceleration of 3 m/s^2
     // for every path in the group
-    pathGroup = PathPlanner.loadPathGroup("Test5Ball", new PathConstraints(4, 3));
-
+    autoPathGroup = PathPlanner.loadPathGroup("Test5Ball", new PathConstraints(4, 3));
+    leftPathGroup = PathPlanner.loadPathGroup("LeftPath1WP", new PathConstraints(4, 3));
+    rightPathGroup = PathPlanner.loadPathGroup("RightPath1WP", new PathConstraints(4, 3));
     // Configure the button bindings
     configureButtonBindings();
     Logger.configureLoggingAndConfig(this, false);
@@ -131,8 +136,11 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
      * is written to wait for slow speeds before setting to coast
      */
     new Trigger(DriverStation::isDisabled)
-      .whileTrue(s_SwerveDrive.setToCoast().ignoringDisable(true))
-      .onFalse(s_SwerveDrive.setToBrake());
+      .whileTrue(s_SwerveDrive.setToCoast()
+      .ignoringDisable(true)
+      .withName("SetToCoast"))
+      .onFalse(s_SwerveDrive.setToBrake()
+      .withName("setToBrake"));
 
 
     /**
@@ -164,14 +172,64 @@ private final SwerveDrive s_SwerveDrive = new SwerveDrive();
           new InstantCommand(()->s_SwerveDrive.setHoldHeadingFlag(true)),
           new InstantCommand(()->s_SwerveDrive.setHoldHeadingAngle(-xBox.getHID().getPOV() + 90))
       ));
-  }
+    xBox.a().onTrue(new ProxyCommand(()->autoBuilder.followPathGroup(autoPathGroupOnTheFly()))
+    .beforeStarting(new InstantCommand(()->s_SwerveDrive.setHoldHeadingFlag(false))));
+
+    xBox.x().onTrue(new ProxyCommand(()->autoBuilder.followPathGroup(goToNearestGoal()))
+    .beforeStarting(new InstantCommand(()->s_SwerveDrive.setHoldHeadingFlag(false))));
+    }
 
   public Command getAutonomousCommand() {
     return 
-      autoBuilder.fullAuto(pathGroup).withName("autoTest");
+      autoBuilder.fullAuto(autoPathGroup).withName("autoTest");
   }
   @Config
   public void isIntegratedSteering(boolean input){
     isIntegratedSteering = input;
   }
+
+  public ArrayList<PathPlannerTrajectory> autoPathGroupOnTheFly(){
+    ArrayList<PathPlannerTrajectory> PGOTF = new ArrayList<PathPlannerTrajectory>(autoPathGroup);
+    PGOTF.add(0,
+    PathPlanner.generatePath(
+      new PathConstraints(4, 3), 
+      new PathPoint(s_SwerveDrive.getOdometryPose().getTranslation(), s_SwerveDrive.getRobotAngle()), 
+      new PathPoint (autoPathGroup.get(0).getInitialHolonomicPose().getTranslation(),autoPathGroup.get(0).getInitialPose().getRotation(), autoPathGroup.get(0).getInitialHolonomicPose().getRotation())));
+    
+    return PGOTF; 
+  }
+
+  public ArrayList<PathPlannerTrajectory> goToNearestGoal(){
+    ArrayList<PathPlannerTrajectory> PGOTF = new ArrayList<PathPlannerTrajectory>();
+    if(Math.abs(leftPathGroup.get(leftPathGroup.size()-1).getEndState().poseMeters.getY() - s_SwerveDrive.getOdometryPose().getY()) < 4){
+      if(Math.abs(leftPathGroup.get(leftPathGroup.size()-1).getEndState().poseMeters.getX() - s_SwerveDrive.getOdometryPose().getX()) < 8){
+        PGOTF.add(PathPlanner.generatePath(
+        new PathConstraints(4, 3), 
+        new PathPoint(s_SwerveDrive.getOdometryPose().getTranslation(), s_SwerveDrive.getRobotAngle()), 
+        new PathPoint (leftPathGroup.get(leftPathGroup.size()-1).getEndState().poseMeters.getTranslation(),leftPathGroup.get(leftPathGroup.size()-1).getEndState().poseMeters.getRotation(), leftPathGroup.get(leftPathGroup.size()-1).getEndState().holonomicRotation)));     
+      } else {
+        PGOTF.add(
+          PathPlanner.generatePath(
+            new PathConstraints(4, 3), 
+            new PathPoint(s_SwerveDrive.getOdometryPose().getTranslation(), s_SwerveDrive.getRobotAngle()), 
+            new PathPoint (leftPathGroup.get(0).getInitialHolonomicPose().getTranslation(),leftPathGroup.get(0).getInitialPose().getRotation(), leftPathGroup.get(0).getInitialHolonomicPose().getRotation())));
+          PGOTF.addAll(leftPathGroup);
+      }
+    } else if(Math.abs(rightPathGroup.get(rightPathGroup.size()-1).getEndState().poseMeters.getX() - s_SwerveDrive.getOdometryPose().getX()) < 8){ 
+      PGOTF.add(PathPlanner.generatePath(
+        new PathConstraints(4, 3), 
+        new PathPoint(s_SwerveDrive.getOdometryPose().getTranslation(), s_SwerveDrive.getRobotAngle()), 
+        new PathPoint (rightPathGroup.get(rightPathGroup.size()-1).getEndState().poseMeters.getTranslation(),rightPathGroup.get(rightPathGroup.size()-1).getEndState().poseMeters.getRotation(), rightPathGroup.get(rightPathGroup.size()-1).getEndState().holonomicRotation)));     
+    } else {
+      PathPlanner.generatePath(
+        new PathConstraints(4, 3), 
+        new PathPoint(s_SwerveDrive.getOdometryPose().getTranslation(), s_SwerveDrive.getRobotAngle()), 
+        new PathPoint (rightPathGroup.get(0).getInitialHolonomicPose().getTranslation(),rightPathGroup.get(0).getInitialPose().getRotation(), rightPathGroup.get(0).getInitialHolonomicPose().getRotation()));
+      PGOTF.addAll(rightPathGroup);
+    }
+
+    return PGOTF;
+  }
+
 }
+

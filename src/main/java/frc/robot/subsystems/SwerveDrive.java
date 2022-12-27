@@ -4,13 +4,13 @@
 
 package frc.robot.subsystems;
 
-import java.util.function.BooleanSupplier;
+
 import java.util.function.DoubleSupplier;
 
 import com.kauailabs.navx.frc.AHRS;
-import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -18,8 +18,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.numbers.N5;
-import edu.wpi.first.math.numbers.N7;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
@@ -33,11 +31,9 @@ import frc.robot.subsystems.swerve.QuadFalconSwerveDrive;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import frc.robot.subsystems.swerve.SwerveModule;
 import frc.robot.util.SimGyroSensorModel;
-import frc.robot.util.SwerveDrivePoseEstimator;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 import edu.wpi.first.wpilibj.SPI;
-import edu.wpi.first.math.util.Units;
 
 
 public class SwerveDrive extends SubsystemBase implements Loggable {
@@ -206,13 +202,11 @@ public class SwerveDrive extends SubsystemBase implements Loggable {
     m_driveTrain.setModuleSpeeds(swerveModuleStates);
   }
 
-
-
   /** 
    * Update the SwerveDrivePoseEstimator
   */
   public Pose2d updateOdometry(){
-    return m_odometry.update(getRobotAngle(), 
+    return m_odometry.update(getRobotAngle(),
       m_driveTrain.getModulePositions());
   }
 
